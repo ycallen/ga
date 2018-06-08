@@ -6,6 +6,7 @@ from sklearn.datasets import fetch_mldata
 from numpy import random
 from numpy import arange
 #sigmoid activatiob function
+from GeneticAlgorithm import *
 
 sigmoid = lambda x: 1 / (1 + np.exp(-x))
 sigmoid_deriv = lambda x: sigmoid(x) * (1-sigmoid(x))
@@ -24,7 +25,9 @@ def softmax(x):
 
 class NN:
     #hyper parameters
-    def __init__(self, hlayer1_size, hlayer2_size, epochs, lr, active_func,active_func_deriv):
+    def __init__(self, hlayer1_size = 0, hlayer2_size = 0, epochs = 0, lr = 0, active_func = None, active_func_deriv = None):
+      self.hlayer1_size = hlayer1_size
+      self.hlayer2_size = hlayer2_size
       self.W1 = np.random.uniform(-0.1, 0.1, (hlayer1_size, 784))
       self.b1 = np.random.uniform(-0.1, 0.1, hlayer1_size)
       self.W2 = np.random.uniform(-0.1, 0.1, (hlayer2_size, hlayer1_size))
@@ -35,6 +38,20 @@ class NN:
       self.lr = lr
       self.active_func = active_func
       self.active_func_deriv = active_func_deriv
+
+    def clone(self, network):
+        self.hlayer1_size = network.hlayer1_size
+        self.hlayer2_size = network.hlayer2_size
+        self.W1 = network.W1
+        self.b1 = network.b1
+        self.W2 = network.W2
+        self.b2 = network.b2
+        self.W3 = network.W3
+        self.b3 = network.b3
+        self.epochs = network.epochs
+        self.lr = network.lr
+        self.active_func = network.active_func
+        self.active_func_deriv = network.active_func_deriv
 
     #foward propagation
     def fprop(self, x):
@@ -49,13 +66,15 @@ class NN:
 
     def get_test_acc(self, test_x, test_y):
         indexes = list(range(test_x.shape[0]))
-        correct = 0
+        correct = 0.0
         for i in indexes:
           fprop_cache = self.fprop(test_x[i])
           prediction = str(np.argmax(fprop_cache['h3']))
           if(test_y[i] == int(prediction)):
             correct = correct + 1
-        print("test accuracy = " + str(correct/len(test_x)))
+        accuracy = 100.0*correct/len(test_x)
+        # print("test accuracy = " + str(accuracy))
+        return accuracy
 
     #backward propagation
     def bprop(self, x, y, fprop_cache):
@@ -192,6 +211,16 @@ if __name__ == '__main__':
   hlayer1_size = 128
   hlayer2_size = 64
 
+
+
   nn = NN(hlayer1_size, hlayer2_size, epochs, lr, active_func, active_func_deriv)
-  nn.train(train_x, train_y, valid_x, valid_y)
-  nn.get_test_acc(test_x,test_y)
+
+
+  weights_amount = 784 * hlayer1_size + hlayer1_size + hlayer1_size * hlayer2_size + hlayer2_size + hlayer2_size * 10 + 10
+  g = Genetics(weights_amount, retain=5, random_select=0.01, mutate_chance=0.1, network=nn, test = [test_x[:100], test_y[:100]])
+  g.create_population(20)
+  g.breed(g.population[0], g.population[1])
+  #g.evolve() # do this for X amount of generations
+  g.run(100)
+  # nn.train(train_x, train_y, valid_x, valid_y)
+  # nn.get_test_acc(test_x,test_y)
