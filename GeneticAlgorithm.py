@@ -115,6 +115,7 @@ class Genetics:
         # Now find out how many spots we have left to fill.
         parents_length = len(parents)
         desired_length = len(self.population) - parents_length
+        assert desired_length >= 0
         children = []
 
         # Add children, which are bred from two remaining networks.
@@ -126,7 +127,7 @@ class Genetics:
 
             # Assuming they aren't the same chromosome...
             #todo: can father and mother be the same?
-            if male != female:
+            if male != female or True:
                 male = parents[male]
                 female = parents[female]
 

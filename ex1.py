@@ -215,12 +215,18 @@ if __name__ == '__main__':
 
   nn = NN(hlayer1_size, hlayer2_size, epochs, lr, active_func, active_func_deriv)
 
-
   weights_amount = 784 * hlayer1_size + hlayer1_size + hlayer1_size * hlayer2_size + hlayer2_size + hlayer2_size * 10 + 10
-  g = Genetics(weights_amount, retain=5, random_select=0.01, mutate_chance=0.1, network=nn, test = [test_x[:100], test_y[:100]])
+
+  # rnd_test_inds = random.sample(range(len(test_y)),100)
+  # g_test_x = [test_x[i] for i in rnd_test_inds]
+  # g_test_y = [test_y[i] for i in rnd_test_inds]
+  # g_test = [g_test_x, g_test_y]
+
+  g_test = [test_x[:1000],test_y[:1000]]
+
+  g = Genetics(weights_amount, retain=0.7, random_select=0.001, mutate_chance=0.01, network=nn, test = g_test)
   g.create_population(20)
   g.breed(g.population[0], g.population[1])
-  #g.evolve() # do this for X amount of generations
   g.run(100)
   # nn.train(train_x, train_y, valid_x, valid_y)
   # nn.get_test_acc(test_x,test_y)
