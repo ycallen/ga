@@ -166,10 +166,10 @@ def get_data():
   train_x = train_x / 255.0
   test_x = test_x / 255.0
 
-  seed = np.random.randint(1, 101)
-  np.random.seed(seed)
+  # seed = np.random.randint(1, 101)
+  # np.random.seed(seed)
   np.random.shuffle(train_x)
-  np.random.seed(seed)
+  # np.random.seed(seed)
   np.random.shuffle(train_y)
 
   valid_size = int(train_x.shape[0] * 0.2)
@@ -224,8 +224,8 @@ if __name__ == '__main__':
 
   g_test = [test_x[:1000],test_y[:1000]]
 
-  g = Genetics(weights_amount, retain=0.7, random_select=0.001, mutate_chance=0.01, network=nn, test = g_test)
-  g.create_population(20)
+  g = Genetics(weights_amount, retain=0.7, random_select=0.001, mutate_chance=0.08, network=nn, test = g_test)
+  g.create_population(50)
   g.breed(g.population[0], g.population[1])
   g.run(100)
   # nn.train(train_x, train_y, valid_x, valid_y)

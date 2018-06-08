@@ -48,6 +48,7 @@ class Genetics:
         self.inner_network = NN()
         self.inner_network.clone(network)
         self.test = test
+        self.best_chrom = (None,None)
 
     def create_population(self, count):
         """Create a population of random networks.
@@ -91,10 +92,16 @@ class Genetics:
 
         # Get scores for each network.
         graded = [(chrom.fitness(self.inner_network,self.test), chrom) for chrom in self.population]
-        print "averaged fitness: " + str(np.mean([grade[0] for grade in graded]))
+        print "averaged fitness: " + str(np.mean([grade[0] for grade in graded])),
+        print "best fitness: " + str(self.best_chrom[0])
 
         # Sort on the scores.
-        graded = [x[1] for x in sorted(graded, key=lambda x: x[0], reverse=True)]
+        graded = [x for x in sorted(graded, key=lambda x: x[0], reverse=True)]
+
+        # update best entity
+        if graded[0][0] > self.best_chrom[0]: self.best_chrom = graded[0]
+
+        graded = [x[1] for x in graded]
 
         # Get the number we want to keep for the next gen.
         retain_length = int(len(graded) * self.retain)
