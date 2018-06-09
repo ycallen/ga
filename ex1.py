@@ -222,9 +222,9 @@ if __name__ == '__main__':
   # g_test_y = [test_y[i] for i in rnd_test_inds]
   # g_test = [g_test_x, g_test_y]
 
-  g_test = [test_x[:1000],test_y[:1000]]
+  g_test = [test_x,test_y]
 
-  g = Genetics(weights_amount, retain=0.7, random_select=0.001, mutate_chance=0.08, network=nn, test = g_test)
+  g = Genetics(weights_amount, retain=0.5, random_select=0.001, mutate_chance=0.1, network=nn, test = g_test)
   g.create_population(50)
   g.breed(g.population[0], g.population[1])
   g.run(100)

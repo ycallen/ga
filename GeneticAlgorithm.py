@@ -35,7 +35,12 @@ class Chromosome:
         network.W1 = np.reshape(w1_values, (network.hlayer1_size, 784))
         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
         network.W3 = np.reshape(w3_values, (10 ,network.hlayer2_size))
-        return network.get_test_acc(test[0],test[1])
+
+        #select randomly 100 examples from the test collection
+        rnd_tests_indices = random.sample(range(len(test[1])),100)
+        test_x = np.asarray([test[0][i] for i in rnd_tests_indices])
+        test_y = np.asarray([test[1][i] for i in rnd_tests_indices])
+        return network.get_test_acc(test_x, test_y)
 
 
 class Genetics:
