@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from ex1 import NN
+import copy
 
 class Chromosome:
     def __init__(self, length):
@@ -37,7 +38,8 @@ class Chromosome:
         network.W3 = np.reshape(w3_values, (10 ,network.hlayer2_size))
 
         #select randomly 100 examples from the test collection
-        rnd_tests_indices = random.sample(range(len(test[1])),100)
+        # random.seed(10)
+        rnd_tests_indices = random.sample(range(len(test[1])),1000)
         test_x = np.asarray([test[0][i] for i in rnd_tests_indices])
         test_y = np.asarray([test[1][i] for i in rnd_tests_indices])
         return network.get_test_acc(test_x, test_y)
@@ -70,24 +72,66 @@ class Genetics:
         self.population = pop
         return pop
 
-    def breed(self, mother, father):
+    def crossover(self, mother, father, type="single_point"):
         """Make two children as parts of their parents.
         Args:
             mother (chromosome): Network weights
             father (chromosome): Network weights
         """
         children = []
-        for _ in range(2):
-            c = Chromosome(self.chromosome_length)
-            for i in xrange(self.chromosome_length):
-                c.weights[i] = random.choice([father.weights[i], mother.weights[i]])
+        if type == "n_points":
+            for _ in range(2):
+                c = Chromosome(self.chromosome_length)
+                for i in xrange(self.chromosome_length):
+                    c.weights[i] = random.choice([father.weights[i], mother.weights[i]])
+                children.append(c)
 
-            children.append(c)
+        elif type == "single_point":
+            cross_points = random.randint(1,self.chromosome_length-1)
+            c1 = Chromosome(self.chromosome_length)
+            c1.weights[:cross_points] = mother.weights[:cross_points]
+            c1.weights[cross_points:] = father.weights[cross_points:]
+            c2 = Chromosome(self.chromosome_length)
+            c2.weights[:cross_points] = father.weights[:cross_points]
+            c2.weights[cross_points:] = mother.weights[cross_points:]
+            children.extend([c1,c2])
+
+        elif type == "n_points_weights":
+            father_w1 = np.reshape(father.weights[0: self.inner_network.hlayer1_size * 784], (self.inner_network.hlayer1_size, 784))
+            father_b1 = father.weights[self.inner_network.hlayer1_size * 784: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size]
+            father_w2 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size], (self.inner_network.hlayer2_size, self.inner_network.hlayer1_size))
+            father_b2 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size ]
+            father_w3 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10],(10 ,self.inner_network.hlayer2_size))
+            father_b3 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10 + 10]
+
+            mother_w1 = np.reshape(mother.weights[0: self.inner_network.hlayer1_size * 784], (self.inner_network.hlayer1_size, 784))
+            mother_b1 = mother.weights[self.inner_network.hlayer1_size * 784 : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size]
+            mother_w2 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size],(self.inner_network.hlayer2_size, self.inner_network.hlayer1_size))
+            mother_b2 = mother.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size]
+            mother_w3 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10],(10, self.inner_network.hlayer2_size))
+            mother_b3 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10 + 10]
+
+            for _ in range(2):
+                c = Chromosome(self.chromosome_length)
+                weights = []
+                for i in range(0,self.inner_network.hlayer1_size):
+                    weights.extend(random.choice([father_w1[i].tolist(), mother_w1[i].tolist()]))
+                for i in range(0,self.inner_network.hlayer1_size):
+                    weights.append(random.choice([father_b1[i],mother_b1[i]]))
+                for i in range(0,self.inner_network.hlayer2_size):
+                    weights.extend(random.choice([father_w2[i].tolist(), mother_w2[i].tolist()]))
+                for i in range(0,self.inner_network.hlayer2_size):
+                    weights.append(random.choice([father_b2[i],mother_b2[i]]))
+                for i in range(0,10):
+                    weights.extend(random.choice([father_w3[i].tolist(),mother_w3[i].tolist()]))
+                for i in range(0,10):
+                    weights.append(random.choice([father_b3[i],mother_b3[i]]))
+
+
+                c.weights = weights
+                children.append(c)
 
         return children
-
-    def fitness(self, network, test):
-        return network.get_test_acc(test[0], test[1])
 
     def evolve(self):
         """Evolve a population of chromosomes.
@@ -97,15 +141,17 @@ class Genetics:
 
         # Get scores for each network.
         graded = [(chrom.fitness(self.inner_network,self.test), chrom) for chrom in self.population]
-        print "averaged fitness: " + str(np.mean([grade[0] for grade in graded])),
-        print "best fitness: " + str(self.best_chrom[0])
+        print "averaged: " + str(np.mean([grade[0] for grade in graded])),
 
         # Sort on the scores.
         graded = [x for x in sorted(graded, key=lambda x: x[0], reverse=True)]
+        # print "graded : " + str([g[0] for g in graded])
+        print "best: " + str(self.best_chrom[0])
+        graded_copy = list(graded)
 
-        # update best entity
+
+        # update best entity and update graded
         if graded[0][0] > self.best_chrom[0]: self.best_chrom = graded[0]
-
         graded = [x[1] for x in graded]
 
         # Get the number we want to keep for the next gen.
@@ -113,48 +159,48 @@ class Genetics:
 
         # The parents are every network we want to keep.
         parents = graded[:retain_length]
+        if self.best_chrom[1] not in parents:
+            parents.append(graded[0])
 
         # For those we aren't keeping, randomly keep some anyway.
         for individual in graded[retain_length:]:
             if self.random_select > random.random():
                 parents.append(individual)
 
-        # Randomly mutate some of the networks we're keeping.
-        for individual in parents:
-            if self.mutate_chance > random.random():
-                individual.mutate()
 
         # Now find out how many spots we have left to fill.
-        parents_length = len(parents)
-        desired_length = len(self.population) - parents_length
-        assert desired_length >= 0
-        children = []
+        desired_length = len(self.population) - len(parents)
 
+        children = []
         # Add children, which are bred from two remaining networks.
         while len(children) < desired_length:
 
             # Get a random mom and dad.
-            male = random.randint(0, parents_length - 1)
-            female = random.randint(0, parents_length - 1)
+            weights = [element[0] for element in graded_copy]
+            total_weight = sum(weights)
+            weights = [w/total_weight for w in weights] #normalize weights
 
-            # Assuming they aren't the same chromosome...
-            #todo: can father and mother be the same?
-            if male != female or True:
-                male = parents[male]
-                female = parents[female]
+            pp = np.random.choice([element[1] for element in graded_copy], 2, True, weights)
+            male = pp[0]
+            female = pp[1]
 
-                # Breed them.
-                babies = self.breed(male, female)
+            # Breed them.
+            babies = self.crossover(male, female, "n_points_weights")
 
-                # Add the children one at a time.
-                for baby in babies:
-                    # Don't grow larger than desired length.
-                    if len(children) < desired_length:
-                        children.append(baby)
+            # Add the children one at a time.
+            for baby in babies:
+                # Don't grow larger than desired length.
+                if len(children) < desired_length:
+                    children.append(baby)
+
+        for individual in children:
+            if self.mutate_chance > random.random():
+                individual.mutate()
 
         parents.extend(children)
-        self.population = parents
+        self.population = list(parents)
 
     def run(self, iterations):
         for i in xrange(iterations):
+            print str(i)+":",
             self.evolve()

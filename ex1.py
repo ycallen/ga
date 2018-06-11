@@ -211,22 +211,17 @@ if __name__ == '__main__':
   hlayer1_size = 128
   hlayer2_size = 64
 
-
+  random.seed(1)
 
   nn = NN(hlayer1_size, hlayer2_size, epochs, lr, active_func, active_func_deriv)
 
   weights_amount = 784 * hlayer1_size + hlayer1_size + hlayer1_size * hlayer2_size + hlayer2_size + hlayer2_size * 10 + 10
 
-  # rnd_test_inds = random.sample(range(len(test_y)),100)
-  # g_test_x = [test_x[i] for i in rnd_test_inds]
-  # g_test_y = [test_y[i] for i in rnd_test_inds]
-  # g_test = [g_test_x, g_test_y]
-
   g_test = [test_x,test_y]
 
-  g = Genetics(weights_amount, retain=0.5, random_select=0.001, mutate_chance=0.1, network=nn, test = g_test)
+  g = Genetics(weights_amount, retain=0.3, random_select=0.0, mutate_chance=0.08, network=nn, test = g_test)
   g.create_population(50)
-  g.breed(g.population[0], g.population[1])
-  g.run(100)
+  g.crossover(g.population[0], g.population[1])
+  g.run(10000)
   # nn.train(train_x, train_y, valid_x, valid_y)
   # nn.get_test_acc(test_x,test_y)
