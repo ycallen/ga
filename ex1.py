@@ -219,8 +219,8 @@ if __name__ == '__main__':
 
   g_test = [test_x,test_y]
 
-  g = Genetics(weights_amount, retain=0.3, random_select=0.0, mutate_chance=0.08, network=nn, test = g_test)
-  g.create_population(50)
+  g = Genetics(weights_amount, retain=0.4, random_select=0.05, mutate_chance=0.1, network=nn, test = g_test)
+  g.create_population(100)
   g.crossover(g.population[0], g.population[1])
   g.run(10000)
   # nn.train(train_x, train_y, valid_x, valid_y)

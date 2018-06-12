@@ -11,7 +11,7 @@ class Chromosome:
         """
         Randomly mutate one part of the network.
         """
-        self.weights += np.random.normal(0, 1, len(self.weights))
+        self.weights += np.random.normal(-0.5, 0.5, len(self.weights))
 
     def fitness(self, network, test):
         w1_values = self.weights[
@@ -37,9 +37,9 @@ class Chromosome:
         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
         network.W3 = np.reshape(w3_values, (10 ,network.hlayer2_size))
 
-        #select randomly 100 examples from the test collection
-        # random.seed(10)
-        rnd_tests_indices = random.sample(range(len(test[1])),1000)
+        # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
+        # in generation
+        rnd_tests_indices = random.sample(range(len(test[1])),100)
         test_x = np.asarray([test[0][i] for i in rnd_tests_indices])
         test_y = np.asarray([test[1][i] for i in rnd_tests_indices])
         return network.get_test_acc(test_x, test_y)
@@ -159,8 +159,8 @@ class Genetics:
 
         # The parents are every network we want to keep.
         parents = graded[:retain_length]
-        if self.best_chrom[1] not in parents:
-            parents.append(graded[0])
+        # if self.best_chrom[1] not in parents:
+        #     parents.append(graded[0])
 
         # For those we aren't keeping, randomly keep some anyway.
         for individual in graded[retain_length:]:
@@ -186,6 +186,7 @@ class Genetics:
 
             # Breed them.
             babies = self.crossover(male, female, "n_points_weights")
+            # babies = self.crossover(male, female, "single_point")
 
             # Add the children one at a time.
             for baby in babies:
@@ -202,5 +203,6 @@ class Genetics:
 
     def run(self, iterations):
         for i in xrange(iterations):
+            random.seed(i)
             print str(i)+":",
             self.evolve()
