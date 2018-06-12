@@ -45,6 +45,19 @@ class Chromosome:
         return network.get_test_acc(test_x, test_y)
 
 
+def select_parents(graded, type):
+    weights = []
+    if type == 'roulette':
+        weights = [element[0] for element in graded]
+        total_weight = sum(weights)
+        weights = [w / total_weight for w in weights]  # normalize weights
+    elif type == 'ranking':
+        weights = range(len(graded),0,-1)
+        sum_weights = sum(weights)
+        weights = [w*1.0/sum_weights for w in weights]
+    return np.random.choice([element[1] for element in graded], 2, True, weights)
+
+
 class Genetics:
     def __init__(self, weights_sizes, retain, random_select, mutate_chance, network, test):
         self.chromosome_length = weights_sizes
@@ -159,8 +172,6 @@ class Genetics:
 
         # The parents are every network we want to keep.
         parents = graded[:retain_length]
-        # if self.best_chrom[1] not in parents:
-        #     parents.append(graded[0])
 
         # For those we aren't keeping, randomly keep some anyway.
         for individual in graded[retain_length:]:
@@ -176,16 +187,14 @@ class Genetics:
         while len(children) < desired_length:
 
             # Get a random mom and dad.
-            weights = [element[0] for element in graded_copy]
-            total_weight = sum(weights)
-            weights = [w/total_weight for w in weights] #normalize weights
 
-            pp = np.random.choice([element[1] for element in graded_copy], 2, True, weights)
-            male = pp[0]
-            female = pp[1]
+            p_parents = select_parents(graded_copy, random.choice(['roulette','ranking']))
+            male = p_parents[0]
+            female = p_parents[1]
 
             # Breed them.
-            babies = self.crossover(male, female, "n_points_weights")
+            actions = ["n_points", "n_points_weights", "single_point"]
+            babies = self.crossover(male, female, random.choice(actions))
             # babies = self.crossover(male, female, "single_point")
 
             # Add the children one at a time.
