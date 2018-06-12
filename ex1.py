@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-from mnist import MNIST
+import mnist
+#from mnist import MNIST
 from sklearn.datasets import fetch_mldata
 from numpy import random
 from numpy import arange

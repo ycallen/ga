@@ -185,7 +185,8 @@ class Genetics:
             female = pp[1]
 
             # Breed them.
-            babies = self.crossover(male, female, "n_points_weights")
+            actions = ["n_points", "n_points_weights", "single_point"]
+            babies = self.crossover(male, female, random.choice(actions))
             # babies = self.crossover(male, female, "single_point")
 
             # Add the children one at a time.
