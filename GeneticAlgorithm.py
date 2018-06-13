@@ -15,7 +15,7 @@ class Chromosome:
 
     def fitness(self, network, test):
         w1_values = self.weights[
-                     0 :
+                     0:
                      network.hlayer1_size * 784]
         network.b1 = self.weights[
                      network.hlayer1_size * 784 :
@@ -35,26 +35,27 @@ class Chromosome:
 
         network.W1 = np.reshape(w1_values, (network.hlayer1_size, 784))
         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
-        network.W3 = np.reshape(w3_values, (10 ,network.hlayer2_size))
+        network.W3 = np.reshape(w3_values, (10, network.hlayer2_size))
 
-        return network.get_test_acc(test[0], test[1])
+        acc, loss = network.get_acc_and_loss(test[0], test[1])
+        return acc, loss
 
 
-def select_parents(graded, type):
+def select_parents(graded, selection_type):
     weights = []
-    if type == 'roulette':
+    if selection_type == 'roulette':
         weights = [element[0] for element in graded]
         total_weight = sum(weights)
         weights = [w / total_weight for w in weights]  # normalize weights
-    elif type == 'ranking':
-        weights = range(len(graded),0,-1)
+    elif selection_type == 'ranking':
+        weights = range(len(graded), 0, -1)
         sum_weights = sum(weights)
         weights = [w*1.0/sum_weights for w in weights]
     return np.random.choice([element[1] for element in graded], 2, True, weights)
 
 
 class Genetics:
-    def __init__(self, weights_sizes, retain, random_select, mutate_chance, network, test):
+    def __init__(self, weights_sizes, retain, random_select, mutate_chance, network, train, test, activation_options, by_loss):
         self.chromosome_length = weights_sizes
         self.population = []
         self.retain = retain
@@ -63,7 +64,9 @@ class Genetics:
         self.inner_network = NN()
         self.inner_network.clone(network)
         self.test = test
-        self.best_chrom = (None,None)
+        self.best_chrom = (None, None)
+        self.activation_options = activation_options
+        self.by_loss = by_loss
 
     def create_population(self, count):
         """Create a population of random networks.
@@ -95,7 +98,7 @@ class Genetics:
                 children.append(c)
 
         elif type == "single_point":
-            cross_points = random.randint(1,self.chromosome_length-1)
+            cross_points = random.randint(1, self.chromosome_length-1)
             c1 = Chromosome(self.chromosome_length)
             c1.weights[:cross_points] = mother.weights[:cross_points]
             c1.weights[cross_points:] = father.weights[cross_points:]
@@ -122,25 +125,25 @@ class Genetics:
             for _ in range(2):
                 c = Chromosome(self.chromosome_length)
                 weights = []
-                for i in range(0,self.inner_network.hlayer1_size):
+                for i in range(0, self.inner_network.hlayer1_size):
                     weights.extend(random.choice([father_w1[i].tolist(), mother_w1[i].tolist()]))
-                for i in range(0,self.inner_network.hlayer1_size):
-                    weights.append(random.choice([father_b1[i],mother_b1[i]]))
-                for i in range(0,self.inner_network.hlayer2_size):
+                for i in range(0, self.inner_network.hlayer1_size):
+                    weights.append(random.choice([father_b1[i], mother_b1[i]]))
+                for i in range(0, self.inner_network.hlayer2_size):
                     weights.extend(random.choice([father_w2[i].tolist(), mother_w2[i].tolist()]))
-                for i in range(0,self.inner_network.hlayer2_size):
-                    weights.append(random.choice([father_b2[i],mother_b2[i]]))
-                for i in range(0,10):
-                    weights.extend(random.choice([father_w3[i].tolist(),mother_w3[i].tolist()]))
-                for i in range(0,10):
-                    weights.append(random.choice([father_b3[i],mother_b3[i]]))
+                for i in range(0, self.inner_network.hlayer2_size):
+                    weights.append(random.choice([father_b2[i], mother_b2[i]]))
+                for i in range(0, 10):
+                    weights.extend(random.choice([father_w3[i].tolist(), mother_w3[i].tolist()]))
+                for i in range(0, 10):
+                    weights.append(random.choice([father_b3[i], mother_b3[i]]))
 
                 c.weights = weights
                 children.append(c)
 
         return children
 
-    def evolve(self, i):
+    def evolve(self):
         """Evolve a population of chromosomes.
         Args:
             pop (list): A list of network parameters
@@ -152,13 +155,18 @@ class Genetics:
         test_x = np.asarray([self.test[0][i] for i in rnd_tests_indices])
         test_y = np.asarray([self.test[1][i] for i in rnd_tests_indices])
 
+        # get random activation and derivative functions
+        self.inner_network.active_func, self.inner_network.active_func_deriv = random.choice(self.activation_options)
+
         # Get scores for each network
-        graded = [(chrom.fitness(self.inner_network, [test_x, test_y]), chrom) for chrom in self.population]
-        print "averaged: " + str(np.mean([grade[0] for grade in graded])),
+        ranked = [(chrom.fitness(self.inner_network, [test_x, test_y]), chrom) for chrom in self.population]
+        graded = [(r[0][0 if not self.by_loss else 1], r[1]) for r in ranked]
+
+        print "acc/loss: " + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
 
         # Sort on the scores.
-        graded = [x for x in sorted(graded, key=lambda x: x[0], reverse=True)]
-        print "best: " + str(self.best_chrom[0])
+        graded = [x for x in sorted(graded, key=lambda x: x[0], reverse=(self.by_loss is False))]
+        print "max(acc): " + str(self.best_chrom[0])
         graded_copy = list(graded)
 
         # update best entity and update graded
@@ -209,4 +217,4 @@ class Genetics:
     def run(self, iterations):
         for i in xrange(iterations):
             print str(i)+":",
-            self.evolve(i)
+            self.evolve()
