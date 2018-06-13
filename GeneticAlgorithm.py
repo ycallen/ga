@@ -148,7 +148,6 @@ class Genetics:
 
         # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
         # in generation
-        random.seed(i)
         rnd_tests_indices = random.sample(range(len(self.test[1])), 100)
         test_x = np.asarray([self.test[0][i] for i in rnd_tests_indices])
         test_y = np.asarray([self.test[1][i] for i in rnd_tests_indices])
