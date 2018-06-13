@@ -13,7 +13,7 @@ class Chromosome:
         """
         self.weights += np.random.normal(-0.5, 0.5, len(self.weights))
 
-    def fitness(self, network, test, j):
+    def fitness(self, network, test):
         w1_values = self.weights[
                      0 :
                      network.hlayer1_size * 784]
@@ -37,13 +37,7 @@ class Chromosome:
         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
         network.W3 = np.reshape(w3_values, (10 ,network.hlayer2_size))
 
-        # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
-        # in generation
-        random.seed(j)
-        rnd_tests_indices = random.sample(range(len(test[1])),100)
-        test_x = np.asarray([test[0][i] for i in rnd_tests_indices])
-        test_y = np.asarray([test[1][i] for i in rnd_tests_indices])
-        return network.get_test_acc(test_x, test_y)
+        return network.get_test_acc(test[0], test[1])
 
 
 def select_parents(graded, type):
@@ -141,28 +135,32 @@ class Genetics:
                 for i in range(0,10):
                     weights.append(random.choice([father_b3[i],mother_b3[i]]))
 
-
                 c.weights = weights
                 children.append(c)
 
         return children
 
-    def evolve(self,i):
+    def evolve(self, i):
         """Evolve a population of chromosomes.
         Args:
             pop (list): A list of network parameters
         """
 
-        # Get scores for each network.
-        graded = [(chrom.fitness(self.inner_network,self.test, i), chrom) for chrom in self.population]
+        # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
+        # in generation
+        random.seed(i)
+        rnd_tests_indices = random.sample(range(len(self.test[1])), 100)
+        test_x = np.asarray([self.test[0][i] for i in rnd_tests_indices])
+        test_y = np.asarray([self.test[1][i] for i in rnd_tests_indices])
+
+        # Get scores for each network
+        graded = [(chrom.fitness(self.inner_network, [test_x, test_y]), chrom) for chrom in self.population]
         print "averaged: " + str(np.mean([grade[0] for grade in graded])),
 
         # Sort on the scores.
         graded = [x for x in sorted(graded, key=lambda x: x[0], reverse=True)]
-        # print "graded : " + str([g[0] for g in graded])
         print "best: " + str(self.best_chrom[0])
         graded_copy = list(graded)
-
 
         # update best entity and update graded
         if graded[0][0] > self.best_chrom[0]: self.best_chrom = graded[0]
@@ -179,7 +177,6 @@ class Genetics:
             if self.random_select > random.random():
                 parents.append(individual)
 
-
         # Now find out how many spots we have left to fill.
         desired_length = len(self.population) - len(parents)
 
@@ -188,8 +185,7 @@ class Genetics:
         while len(children) < desired_length:
 
             # Get a random mom and dad.
-
-            p_parents = select_parents(graded_copy, random.choice(['roulette','ranking']))
+            p_parents = select_parents(graded_copy, random.choice(['roulette', 'ranking']))
             male = p_parents[0]
             female = p_parents[1]
 
