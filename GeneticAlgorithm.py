@@ -13,7 +13,7 @@ class Chromosome:
         """
         self.weights += np.random.normal(-0.5, 0.5, len(self.weights))
 
-    def fitness(self, network, test):
+    def fitness(self, network, test, j):
         w1_values = self.weights[
                      0 :
                      network.hlayer1_size * 784]
@@ -39,6 +39,7 @@ class Chromosome:
 
         # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
         # in generation
+        random.seed(j)
         rnd_tests_indices = random.sample(range(len(test[1])),100)
         test_x = np.asarray([test[0][i] for i in rnd_tests_indices])
         test_y = np.asarray([test[1][i] for i in rnd_tests_indices])
@@ -146,14 +147,14 @@ class Genetics:
 
         return children
 
-    def evolve(self):
+    def evolve(self,i):
         """Evolve a population of chromosomes.
         Args:
             pop (list): A list of network parameters
         """
 
         # Get scores for each network.
-        graded = [(chrom.fitness(self.inner_network,self.test), chrom) for chrom in self.population]
+        graded = [(chrom.fitness(self.inner_network,self.test, i), chrom) for chrom in self.population]
         print "averaged: " + str(np.mean([grade[0] for grade in graded])),
 
         # Sort on the scores.
@@ -212,6 +213,5 @@ class Genetics:
 
     def run(self, iterations):
         for i in xrange(iterations):
-            random.seed(i)
             print str(i)+":",
-            self.evolve()
+            self.evolve(i)

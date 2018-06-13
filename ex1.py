@@ -9,6 +9,7 @@ from numpy import arange
 #sigmoid activatiob function
 from GeneticAlgorithm import *
 
+# sigmoid activation function
 sigmoid = lambda x: 1 / (1 + np.exp(-x))
 sigmoid_deriv = lambda x: sigmoid(x) * (1-sigmoid(x))
 
@@ -16,6 +17,7 @@ sigmoid_deriv = lambda x: sigmoid(x) * (1-sigmoid(x))
 relu = lambda x: np.maximum(0, x)
 relu_deriv = lambda x: np.maximum(np.sign(x), 0)
 
+# tanh activation function
 tanh = lambda x: np.tanh(x)
 tanh_deriv = lambda x: 1 - np.power(np.tanh(x), 2)
 
@@ -220,7 +222,7 @@ if __name__ == '__main__':
 
   g_test = [test_x,test_y]
 
-  g = Genetics(weights_amount, retain=0.4, random_select=0.05, mutate_chance=0.1, network=nn, test = g_test)
+  g = Genetics(weights_amount, retain=0.2, random_select=0.05, mutate_chance=0.1, network=nn, test = g_test)
   g.create_population(100)
   g.crossover(g.population[0], g.population[1])
   g.run(10000)
