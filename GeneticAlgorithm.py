@@ -2,10 +2,26 @@ import numpy as np
 import random
 from ex1 import NN
 import copy
+import multiprocessing
+import time
 
 class Chromosome:
     def __init__(self, length):
-        self.weights = np.random.uniform(0,1,length)
+        # self.weights = np.random.uniform(0, 1, length)
+        eps_w1 = np.sqrt(6.0 / (784+128))
+        eps_w2 = np.sqrt(6.0 / (128+64))
+        eps_w3 = np.sqrt(6.0 / (64+10))
+        eps_b1 = np.sqrt(6.0 / (784 + 1))
+        eps_b2 = np.sqrt(6.0 / (128 + 1))
+        eps_b3 = np.sqrt(6.0 / (64 + 1))
+        self.weights = []
+        self.weights.extend(np.random.uniform(-eps_w1, eps_w1, 784 * 128).tolist())
+        self.weights.extend(np.random.uniform(-eps_b1, eps_b1, 128).tolist())
+        self.weights.extend(np.random.uniform(-eps_w2, eps_w2, 128 * 64).tolist())
+        self.weights.extend(np.random.uniform(-eps_b2, eps_b2, 64).tolist())
+        self.weights.extend(np.random.uniform(-eps_w3, eps_w3, 64 * 10).tolist())
+        self.weights.extend(np.random.uniform(-eps_b3, eps_b3, 10).tolist())
+
 
     def mutate(self):
         """
@@ -14,6 +30,7 @@ class Chromosome:
         self.weights += np.random.normal(0.0, 0.1, len(self.weights))
 
     def fitness(self, network, test):
+        # a = time.time()
         w1_values = self.weights[
                      0:
                      network.hlayer1_size * 784]
@@ -42,7 +59,45 @@ class Chromosome:
         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
         network.W3 = np.reshape(w3_values, (10, network.hlayer2_size))
 
-        return network.get_acc_and_loss(test[0], test[1])
+        # b = time.time()
+        val = network.get_acc_and_loss(test[0], test[1])
+        # c = time.time()
+
+        # print str(b-a), " - ", str(c-b)
+
+        return val
+
+
+# def g_fitness(chrom, network, test):
+#         w1_values = chrom.weights[
+#                      0:
+#                      network.hlayer1_size * 784]
+#         network.b1 = chrom.weights[
+#                      network.hlayer1_size * 784:
+#                      network.hlayer1_size * 784 + network.hlayer1_size]
+#         w2_values = chrom.weights[
+#                      network.hlayer1_size * 784 + network.hlayer1_size :
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size]
+#         network.b2 = chrom.weights[
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size:
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+#                      network.hlayer2_size]
+#         w3_values = chrom.weights[
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+#                      network.hlayer2_size:
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+#                      network.hlayer2_size + network.hlayer2_size*10]
+#         network.b3 = chrom.weights[
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+#                      network.hlayer2_size + network.hlayer2_size * 10:
+#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+#                      network.hlayer2_size + network.hlayer2_size * 10 + 10]
+#
+#         network.W1 = np.reshape(w1_values, (network.hlayer1_size, 784))
+#         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
+#         network.W3 = np.reshape(w3_values, (10, network.hlayer2_size))
+#
+#         return network.get_acc_and_loss(test[0], test[1])
 
 
 def select_parents(graded, selection_type):
@@ -54,7 +109,7 @@ def select_parents(graded, selection_type):
     elif selection_type == 'ranking':
         weights = range(len(graded), 0, -1)
         sum_weights = sum(weights)
-        weights = [w*1.0/sum_weights for w in weights]
+        weights = [float(w)/float(sum_weights) for w in weights]
     return np.random.choice([element[1] for element in graded], 2, True, weights)
 
 
@@ -73,6 +128,14 @@ class Genetics:
         self.best_chrom = (-1, None)
         self.activation_options = activation_options
         self.by_loss = by_loss
+
+        print weights_sizes
+        print retain
+        print random_select
+        print mutate_chance
+        print activation_options
+
+
 
     def create_population(self, count):
         """Create a population of random networks.
@@ -114,6 +177,7 @@ class Genetics:
             children.extend([c1, c2])
 
         elif type == "n_points_weights":
+            # a = time.time()
             father_w1 = np.reshape(father.weights[0: self.inner_network.hlayer1_size * 784], (self.inner_network.hlayer1_size, 784))
             father_b1 = father.weights[self.inner_network.hlayer1_size * 784: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size]
             father_w2 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size], (self.inner_network.hlayer2_size, self.inner_network.hlayer1_size))
@@ -146,7 +210,8 @@ class Genetics:
 
                 c.weights = weights
                 children.append(c)
-
+            # b = time.time()
+            # print str(b-a)
         return children
 
     def evolve(self):
@@ -157,9 +222,8 @@ class Genetics:
 
         # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
         # in generation
-        rnd_indices = random.sample(range(len(self.train[1])), 100)
-        # test_x = np.asarray([self.test[0][i] for i in rnd_indices])
-        # test_y = np.asarray([self.test[1][i] for i in rnd_indices])
+        # random.seed(1)
+        rnd_indices = random.sample(range(len(self.train[1])), 1000)
         train_x = np.asarray([self.train[0][i] for i in rnd_indices])
         train_y = np.asarray([self.train[1][i] for i in rnd_indices])
 
@@ -168,7 +232,7 @@ class Genetics:
 
         # Get scores for each network
         ranked = [(chrom.fitness(self.inner_network, [train_x, train_y]), chrom) for chrom in self.population]
-        graded = [(r[0][0], r[1]) for r in ranked]
+        graded = [(r[0][0], r[1]) for r in list(ranked)]
 
         print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.mean([r[0][1] for r in ranked])), # + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
 
@@ -180,18 +244,18 @@ class Genetics:
         # update best entity and update graded
         if graded[0][0] > self.best_chrom[0]:
             self.best_chrom = graded[0]
-        graded = [x[1] for x in graded]
+        graded_only_chrom = [x[1] for x in list(graded)]
 
         # Get the number we want to keep for the next gen.
-        retain_length = int(len(graded) * self.retain)
+        retain_length = int(len(graded_copy) * self.retain)
 
         # The parents are every network we want to keep.
-        parents = graded[:retain_length]
+        parents = graded_only_chrom[:retain_length]
 
-        # For those we aren't keeping, randomly keep some anyway.
-        for individual in graded[retain_length:]:
-            if self.random_select > random.random():
-                parents.append(individual)
+        # # For those we aren't keeping, randomly keep some anyway.
+        # for individual in graded_only_chrom[retain_length:]:
+        #     if self.random_select > random.random():
+        #         parents.append(individual)
 
         # Now find out how many spots we have left to fill.
         desired_length = len(self.population) - len(parents)
