@@ -1,103 +1,45 @@
 import numpy as np
 import random
 from ex1 import NN
-import copy
-import multiprocessing
-import time
+
 
 class Chromosome:
-    def __init__(self, length):
-        # self.weights = np.random.uniform(0, 1, length)
-        eps_w1 = np.sqrt(6.0 / (784+128))
-        eps_w2 = np.sqrt(6.0 / (128+64))
-        eps_w3 = np.sqrt(6.0 / (64+10))
-        eps_b1 = np.sqrt(6.0 / (784 + 1))
-        eps_b2 = np.sqrt(6.0 / (128 + 1))
-        eps_b3 = np.sqrt(6.0 / (64 + 1))
-        self.weights = []
-        self.weights.extend(np.random.uniform(-eps_w1, eps_w1, 784 * 128).tolist())
-        self.weights.extend(np.random.uniform(-eps_b1, eps_b1, 128).tolist())
-        self.weights.extend(np.random.uniform(-eps_w2, eps_w2, 128 * 64).tolist())
-        self.weights.extend(np.random.uniform(-eps_b2, eps_b2, 64).tolist())
-        self.weights.extend(np.random.uniform(-eps_w3, eps_w3, 64 * 10).tolist())
-        self.weights.extend(np.random.uniform(-eps_b3, eps_b3, 10).tolist())
+    def __init__(self, length=0):
+        self.W1 = self.initialize_weight(784,128)
+        self.b1 = self.initialize_weight(128)
+        self.W2 = self.initialize_weight(128,64)
+        self.b2 = self.initialize_weight(64)
+        self.W3 = self.initialize_weight(64,10)
+        self.b3 = self.initialize_weight(10)
 
+    def initialize_weight(self, s1, s2=None):
+        eps = np.sqrt(6.0 / (s1 + (s2 if s2 is not None else 1)))
+        if s2 is None:
+            return np.random.uniform(-eps, eps, s1)
+        return np.random.uniform(-eps, eps, (s2, s1))
 
     def mutate(self):
         """
         Randomly mutate one part of the network.
         """
-        self.weights += np.random.normal(0.0, 0.1, len(self.weights))
+        self.W1 = self.W1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W1.shape)
+        self.W2 = self.W2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W2.shape)
+        self.W3 = self.W3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W3.shape)
+        self.b1 = self.b1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b1.shape[0])
+        self.b2 = self.b2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b2.shape[0])
+        self.b3 = self.b3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b3.shape[0])
 
     def fitness(self, network, test):
-        # a = time.time()
-        w1_values = self.weights[
-                     0:
-                     network.hlayer1_size * 784]
-        network.b1 = self.weights[
-                     network.hlayer1_size * 784:
-                     network.hlayer1_size * 784 + network.hlayer1_size]
-        w2_values = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size :
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size]
-        network.b2 = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size:
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-                     network.hlayer2_size]
-        w3_values = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-                     network.hlayer2_size:
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-                     network.hlayer2_size + network.hlayer2_size*10]
-        network.b3 = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-                     network.hlayer2_size + network.hlayer2_size * 10:
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-                     network.hlayer2_size + network.hlayer2_size * 10 + 10]
 
-        network.W1 = np.reshape(w1_values, (network.hlayer1_size, 784))
-        network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
-        network.W3 = np.reshape(w3_values, (10, network.hlayer2_size))
+        network.W1 = self.W1
+        network.W2 = self.W2
+        network.W3 = self.W3
+        network.b1 = self.b1
+        network.b2 = self.b2
+        network.b3 = self.b3
 
-        # b = time.time()
         val = network.get_acc_and_loss(test[0], test[1])
-        # c = time.time()
-
-        # print str(b-a), " - ", str(c-b)
-
         return val
-
-
-# def g_fitness(chrom, network, test):
-#         w1_values = chrom.weights[
-#                      0:
-#                      network.hlayer1_size * 784]
-#         network.b1 = chrom.weights[
-#                      network.hlayer1_size * 784:
-#                      network.hlayer1_size * 784 + network.hlayer1_size]
-#         w2_values = chrom.weights[
-#                      network.hlayer1_size * 784 + network.hlayer1_size :
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size]
-#         network.b2 = chrom.weights[
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size:
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-#                      network.hlayer2_size]
-#         w3_values = chrom.weights[
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-#                      network.hlayer2_size:
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-#                      network.hlayer2_size + network.hlayer2_size*10]
-#         network.b3 = chrom.weights[
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-#                      network.hlayer2_size + network.hlayer2_size * 10:
-#                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
-#                      network.hlayer2_size + network.hlayer2_size * 10 + 10]
-#
-#         network.W1 = np.reshape(w1_values, (network.hlayer1_size, 784))
-#         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
-#         network.W3 = np.reshape(w3_values, (10, network.hlayer2_size))
-#
-#         return network.get_acc_and_loss(test[0], test[1])
 
 
 def select_parents(graded, selection_type):
@@ -135,8 +77,6 @@ class Genetics:
         print mutate_chance
         print activation_options
 
-
-
     def create_population(self, count):
         """Create a population of random networks.
         Args:
@@ -159,59 +99,29 @@ class Genetics:
             father (chromosome): Network weights
         """
         children = []
-        if type == "n_points":
-            for _ in range(1):
-                c = Chromosome(self.chromosome_length)
-                for i in xrange(self.chromosome_length):
-                    c.weights[i] = random.choice([father.weights[i], mother.weights[i]])
-                children.append(c)
 
-        elif type == "single_point":
-            cross_points = random.randint(1, self.chromosome_length-1)
-            c1 = Chromosome(self.chromosome_length)
-            c1.weights[:cross_points] = mother.weights[:cross_points]
-            c1.weights[cross_points:] = father.weights[cross_points:]
-            c2 = Chromosome(self.chromosome_length)
-            c2.weights[:cross_points] = father.weights[:cross_points]
-            c2.weights[cross_points:] = mother.weights[cross_points:]
-            children.extend([c1, c2])
+        if type == "n_points_weights":
+            c = Chromosome()
 
-        elif type == "n_points_weights":
-            # a = time.time()
-            father_w1 = np.reshape(father.weights[0: self.inner_network.hlayer1_size * 784], (self.inner_network.hlayer1_size, 784))
-            father_b1 = father.weights[self.inner_network.hlayer1_size * 784: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size]
-            father_w2 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size], (self.inner_network.hlayer2_size, self.inner_network.hlayer1_size))
-            father_b2 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size ]
-            father_w3 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10],(10 ,self.inner_network.hlayer2_size))
-            father_b3 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10 + 10]
+            v = np.random.randint(2, size=father.W1.shape[0])
+            ones = np.ones(father.W1.shape[1])
+            m = v.reshape(v.shape[0], 1).dot(ones.reshape(1, ones.shape[0]))
+            c.W1 = father.W1 * m + mother.W1 * (1 - m)
+            c.b1 = v * father.b1 + (1 - v) * mother.b1
 
-            mother_w1 = np.reshape(mother.weights[0: self.inner_network.hlayer1_size * 784], (self.inner_network.hlayer1_size, 784))
-            mother_b1 = mother.weights[self.inner_network.hlayer1_size * 784 : self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size]
-            mother_w2 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size],(self.inner_network.hlayer2_size, self.inner_network.hlayer1_size))
-            mother_b2 = mother.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size]
-            mother_w3 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10],(10, self.inner_network.hlayer2_size))
-            mother_b3 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10 + 10]
+            v = np.random.randint(2, size=father.W2.shape[0])
+            ones = np.ones(father.W2.shape[1])
+            m = v.reshape(v.shape[0], 1).dot(ones.reshape(1, ones.shape[0]))
+            c.W2 = father.W2 * m + mother.W2 * (1 - m)
+            c.b2 = v * father.b2 + (1 - v) * mother.b2
 
-            for _ in range(1):
-                c = Chromosome(self.chromosome_length)
-                weights = []
-                for i in range(0, self.inner_network.hlayer1_size):
-                    weights.extend(random.choice([father_w1[i].tolist(), mother_w1[i].tolist()]))
-                for i in range(0, self.inner_network.hlayer1_size):
-                    weights.append(random.choice([father_b1[i], mother_b1[i]]))
-                for i in range(0, self.inner_network.hlayer2_size):
-                    weights.extend(random.choice([father_w2[i].tolist(), mother_w2[i].tolist()]))
-                for i in range(0, self.inner_network.hlayer2_size):
-                    weights.append(random.choice([father_b2[i], mother_b2[i]]))
-                for i in range(0, 10):
-                    weights.extend(random.choice([father_w3[i].tolist(), mother_w3[i].tolist()]))
-                for i in range(0, 10):
-                    weights.append(random.choice([father_b3[i], mother_b3[i]]))
+            v = np.random.randint(2, size=father.W3.shape[0])
+            ones = np.ones(father.W3.shape[1])
+            m = v.reshape(v.shape[0], 1).dot(ones.reshape(1, ones.shape[0]))
+            c.W3 = father.W3 * m + mother.W3 * (1 - m)
+            c.b3 = v * father.b3 + (1 - v) * mother.b3
 
-                c.weights = weights
-                children.append(c)
-            # b = time.time()
-            # print str(b-a)
+            children.append(c)
         return children
 
     def evolve(self):
@@ -223,7 +133,7 @@ class Genetics:
         # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
         # in generation
         # random.seed(1)
-        rnd_indices = random.sample(range(len(self.train[1])), 1000)
+        rnd_indices = random.sample(range(len(self.train[1])), 100)
         train_x = np.asarray([self.train[0][i] for i in rnd_indices])
         train_y = np.asarray([self.train[1][i] for i in rnd_indices])
 
@@ -234,7 +144,7 @@ class Genetics:
         ranked = [(chrom.fitness(self.inner_network, [train_x, train_y]), chrom) for chrom in self.population]
         graded = [(r[0][0], r[1]) for r in list(ranked)]
 
-        print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.mean([r[0][1] for r in ranked])), # + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
+        print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.sum([r[0][1] for r in ranked])), # + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
 
         # Sort on the scores.
         graded = [x for x in sorted(graded, key=lambda g: g[0], reverse=True)]
@@ -266,15 +176,16 @@ class Genetics:
 
             # Get a random mom and dad.
             # p_parents = select_parents(graded_copy[:-retain_length], random.choice(['roulette', 'ranking']))
-            p_parents = select_parents(graded_copy[:-retain_length], 'ranking')
+
+            p_parents = select_parents(graded_copy[-retain_length:], 'ranking')
 
             male = p_parents[0]
             female = p_parents[1]
 
             # Breed them.
-            actions = ["n_points", "n_points_weights", "single_point"]
-            # babies = self.crossover(male, female, random.choice(actions))
-            babies = self.crossover(male, female, "n_points_weights")
+            actions = ["n_points_weights"]
+            c = random.choice(actions)
+            babies = self.crossover(male, female, c)
 
             # Add the children one at a time.
             for baby in babies:
@@ -283,9 +194,9 @@ class Genetics:
                     children.append(baby)
 
         parents.extend(children)
-        for individual in parents:
-            if self.mutate_chance > random.random():
-                individual.mutate()
+        # for individual in parents:
+        #     if self.mutate_chance > random.random():
+        #         individual.mutate()
 
         self.population = list(parents)
 
