@@ -2,6 +2,7 @@ from sklearn.datasets import fetch_mldata
 from sklearn.metrics import log_loss
 from numpy import arange
 from GeneticAlgorithm import *
+import time
 
 # sigmoid activation function
 sigmoid = lambda x: 1 / (1 + np.exp(-x))
@@ -92,12 +93,16 @@ class NN:
             # compute loss
             # pred = [0]*10
             # pred[int(test_y[i])] = 1
-            # total_loss += log_loss(pred, fprop_cache['h3'])
+            # a = time.time()
+            # total_loss += log_loss(pred, fprop_cache['h3'], normalize=False)
+            # total_loss += -np.log(pred, fprop_cache['h3'])
+            # b = time.time()
+            # print b-a
 
         accuracy = 100.0 * correct / len(test_x)
         loss = total_loss / len(test_x)
 
-        return accuracy, 0.0
+        return accuracy, loss
 
 
     # backward propagation
@@ -214,6 +219,7 @@ if __name__ == '__main__':
     hlayer2_size = 64
 
     random.seed(1)
+    np.random.seed(1)
 
     nn = NN(hlayer1_size, hlayer2_size, epochs, lr, active_func, active_func_deriv)
 
@@ -222,7 +228,7 @@ if __name__ == '__main__':
     g_train = [train_x, train_y]
     g_test = [test_x, test_y]
 
-    g = Genetics(weights_amount, retain=0.3, random_select=0.00, mutate_chance=1.0, network=nn, train=g_train,
+    g = Genetics(weights_amount, retain=0.1, random_select=0.00, mutate_chance=0.05, network=nn, train=g_train,
                  test=g_test, activation_options=[(relu, relu_deriv)], by_loss=False)
     g.create_population(100)
     g.crossover(g.population[0], g.population[1])
