@@ -11,34 +11,38 @@ class Chromosome:
         """
         Randomly mutate one part of the network.
         """
-        self.weights += np.random.normal(-0.5, 0.5, len(self.weights))
+        self.weights += np.random.normal(0.0, 0.1, len(self.weights))
 
     def fitness(self, network, test):
         w1_values = self.weights[
                      0:
                      network.hlayer1_size * 784]
         network.b1 = self.weights[
-                     network.hlayer1_size * 784 :
+                     network.hlayer1_size * 784:
                      network.hlayer1_size * 784 + network.hlayer1_size]
         w2_values = self.weights[
                      network.hlayer1_size * 784 + network.hlayer1_size :
                      network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size]
         network.b2 = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size :
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size + network.hlayer2_size ]
+                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size:
+                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+                     network.hlayer2_size]
         w3_values = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size + network.hlayer2_size:
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size + network.hlayer2_size + network.hlayer2_size*10]
+                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+                     network.hlayer2_size:
+                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+                     network.hlayer2_size + network.hlayer2_size*10]
         network.b3 = self.weights[
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size + network.hlayer2_size + network.hlayer2_size * 10:
-                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size + network.hlayer2_size + network.hlayer2_size * 10 + 10]
+                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+                     network.hlayer2_size + network.hlayer2_size * 10:
+                     network.hlayer1_size * 784 + network.hlayer1_size + network.hlayer1_size * network.hlayer2_size +
+                     network.hlayer2_size + network.hlayer2_size * 10 + 10]
 
         network.W1 = np.reshape(w1_values, (network.hlayer1_size, 784))
         network.W2 = np.reshape(w2_values, (network.hlayer2_size, network.hlayer1_size))
         network.W3 = np.reshape(w3_values, (10, network.hlayer2_size))
 
-        acc, loss = network.get_acc_and_loss(test[0], test[1])
-        return acc, loss
+        return network.get_acc_and_loss(test[0], test[1])
 
 
 def select_parents(graded, selection_type):
@@ -55,7 +59,8 @@ def select_parents(graded, selection_type):
 
 
 class Genetics:
-    def __init__(self, weights_sizes, retain, random_select, mutate_chance, network, train, test, activation_options, by_loss):
+    def __init__(self, weights_sizes, retain, random_select, mutate_chance, network, train, test, activation_options,
+                 by_loss):
         self.chromosome_length = weights_sizes
         self.population = []
         self.retain = retain
@@ -64,7 +69,8 @@ class Genetics:
         self.inner_network = NN()
         self.inner_network.clone(network)
         self.test = test
-        self.best_chrom = (None, None)
+        self.train = train
+        self.best_chrom = (-1, None)
         self.activation_options = activation_options
         self.by_loss = by_loss
 
@@ -91,7 +97,7 @@ class Genetics:
         """
         children = []
         if type == "n_points":
-            for _ in range(2):
+            for _ in range(1):
                 c = Chromosome(self.chromosome_length)
                 for i in xrange(self.chromosome_length):
                     c.weights[i] = random.choice([father.weights[i], mother.weights[i]])
@@ -105,7 +111,7 @@ class Genetics:
             c2 = Chromosome(self.chromosome_length)
             c2.weights[:cross_points] = father.weights[:cross_points]
             c2.weights[cross_points:] = mother.weights[cross_points:]
-            children.extend([c1,c2])
+            children.extend([c1, c2])
 
         elif type == "n_points_weights":
             father_w1 = np.reshape(father.weights[0: self.inner_network.hlayer1_size * 784], (self.inner_network.hlayer1_size, 784))
@@ -122,7 +128,7 @@ class Genetics:
             mother_w3 = np.reshape(father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10],(10, self.inner_network.hlayer2_size))
             mother_b3 = father.weights[self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10: self.inner_network.hlayer1_size * 784 + self.inner_network.hlayer1_size + self.inner_network.hlayer1_size * self.inner_network.hlayer2_size + self.inner_network.hlayer2_size + self.inner_network.hlayer2_size * 10 + 10]
 
-            for _ in range(2):
+            for _ in range(1):
                 c = Chromosome(self.chromosome_length)
                 weights = []
                 for i in range(0, self.inner_network.hlayer1_size):
@@ -151,26 +157,29 @@ class Genetics:
 
         # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
         # in generation
-        rnd_tests_indices = random.sample(range(len(self.test[1])), 100)
-        test_x = np.asarray([self.test[0][i] for i in rnd_tests_indices])
-        test_y = np.asarray([self.test[1][i] for i in rnd_tests_indices])
+        rnd_indices = random.sample(range(len(self.train[1])), 100)
+        # test_x = np.asarray([self.test[0][i] for i in rnd_indices])
+        # test_y = np.asarray([self.test[1][i] for i in rnd_indices])
+        train_x = np.asarray([self.train[0][i] for i in rnd_indices])
+        train_y = np.asarray([self.train[1][i] for i in rnd_indices])
 
         # get random activation and derivative functions
         self.inner_network.active_func, self.inner_network.active_func_deriv = random.choice(self.activation_options)
 
         # Get scores for each network
-        ranked = [(chrom.fitness(self.inner_network, [test_x, test_y]), chrom) for chrom in self.population]
-        graded = [(r[0][0 if not self.by_loss else 1], r[1]) for r in ranked]
+        ranked = [(chrom.fitness(self.inner_network, [train_x, train_y]), chrom) for chrom in self.population]
+        graded = [(r[0][0], r[1]) for r in ranked]
 
-        print "acc/loss: " + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
+        print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.mean([r[0][1] for r in ranked])), # + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
 
         # Sort on the scores.
-        graded = [x for x in sorted(graded, key=lambda x: x[0], reverse=(self.by_loss is False))]
+        graded = [x for x in sorted(graded, key=lambda g: g[0], reverse=True)]
         print "max(acc): " + str(self.best_chrom[0])
         graded_copy = list(graded)
 
         # update best entity and update graded
-        if graded[0][0] > self.best_chrom[0]: self.best_chrom = graded[0]
+        if graded[0][0] > self.best_chrom[0]:
+            self.best_chrom = graded[0]
         graded = [x[1] for x in graded]
 
         # Get the number we want to keep for the next gen.
@@ -192,14 +201,16 @@ class Genetics:
         while len(children) < desired_length:
 
             # Get a random mom and dad.
-            p_parents = select_parents(graded_copy, random.choice(['roulette', 'ranking']))
+            # p_parents = select_parents(graded_copy[:-retain_length], random.choice(['roulette', 'ranking']))
+            p_parents = select_parents(graded_copy[:-retain_length], 'ranking')
+
             male = p_parents[0]
             female = p_parents[1]
 
             # Breed them.
             actions = ["n_points", "n_points_weights", "single_point"]
-            babies = self.crossover(male, female, random.choice(actions))
-            # babies = self.crossover(male, female, "single_point")
+            # babies = self.crossover(male, female, random.choice(actions))
+            babies = self.crossover(male, female, "n_points_weights")
 
             # Add the children one at a time.
             for baby in babies:
@@ -207,11 +218,11 @@ class Genetics:
                 if len(children) < desired_length:
                     children.append(baby)
 
-        for individual in children:
+        parents.extend(children)
+        for individual in parents:
             if self.mutate_chance > random.random():
                 individual.mutate()
 
-        parents.extend(children)
         self.population = list(parents)
 
     def run(self, iterations):
