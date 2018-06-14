@@ -22,12 +22,12 @@ class Chromosome:
         """
         Randomly mutate one part of the network.
         """
-        self.W1 = self.W1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W1.shape)
-        self.W2 = self.W2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W2.shape)
-        self.W3 = self.W3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W3.shape)
-        self.b1 = self.b1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b1.shape[0])
-        self.b2 = self.b2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b2.shape[0])
-        self.b3 = self.b3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b3.shape[0])
+        self.W1 = self.W1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.3, size=self.W1.shape)
+        self.W2 = self.W2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.3, size=self.W2.shape)
+        self.W3 = self.W3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.3, size=self.W3.shape)
+        self.b1 = self.b1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.3, size=self.b1.shape[0])
+        self.b2 = self.b2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.3, size=self.b2.shape[0])
+        self.b3 = self.b3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.3, size=self.b3.shape[0])
 
     def fitness(self, network, test):
 
@@ -144,7 +144,7 @@ class Genetics:
         ranked = [(chrom.fitness(self.inner_network, [train_x, train_y]), chrom) for chrom in self.population]
         graded = [(r[0][0], r[1]) for r in list(ranked)]
 
-        print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.sum([r[0][1] for r in ranked])), # + str(np.mean([r[0][0] for r in ranked])) + "/" + str(np.mean([r[0][1] for r in ranked])),
+        print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.sum([r[0][1] for r in ranked])),
 
         # Sort on the scores.
         graded = [x for x in sorted(graded, key=lambda g: g[0], reverse=True)]
@@ -194,13 +194,14 @@ class Genetics:
                     children.append(baby)
 
         parents.extend(children)
-        # for individual in parents:
-        #     if self.mutate_chance > random.random():
-        #         individual.mutate()
+        for individual in parents:
+            if self.mutate_chance > random.random():
+                individual.mutate()
 
         self.population = list(parents)
 
     def run(self, iterations):
         for i in xrange(iterations):
             print str(i)+":",
+            random.seed(int(i/100.0))
             self.evolve()
