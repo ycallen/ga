@@ -55,11 +55,11 @@ class NN:
 
     # foward propagation
     def fprop(self, x):
-        z1 = np.dot(self.W1, x) + self.b1
+        z1 = np.dot(x, self.W1) + self.b1
         h1 = self.active_func(z1)
-        z2 = np.dot(self.W2, h1) + self.b2
+        z2 = np.dot(h1, self.W2) + self.b2
         h2 = self.active_func(z2)
-        z3 = np.dot(self.W3, h2) + self.b3
+        z3 = np.dot(h2, self.W3) + self.b3
         h3 = softmax(z3)
         ret = {'z1': z1, 'h1': h1, 'z2': z2, 'h2': h2, 'z3': z3, 'h3': h3}
         return ret
@@ -198,7 +198,6 @@ def get_data():
     # seed = np.random.randint(1, 101)
     # np.random.seed(seed)
     np.random.shuffle(train_x)
-    # np.random.seed(seed)
     np.random.shuffle(train_y)
 
     valid_size = int(train_x.shape[0] * 0.2)
@@ -218,9 +217,6 @@ if __name__ == '__main__':
     hlayer1_size = 128
     hlayer2_size = 64
 
-    random.seed(1)
-    np.random.seed(1)
-
     nn = NN(hlayer1_size, hlayer2_size, epochs, lr, active_func, active_func_deriv)
 
     weights_amount = 784 * hlayer1_size + hlayer1_size + hlayer1_size * hlayer2_size + hlayer2_size + hlayer2_size * 10 + 10
@@ -228,10 +224,11 @@ if __name__ == '__main__':
     g_train = [train_x, train_y]
     g_test = [test_x, test_y]
 
-    g = Genetics(weights_amount, retain=0.5, random_select=0.00, mutate_chance=0.05, network=nn, train=g_train,
+    g = Genetics(weights_amount, retain=0.07, random_select=0.00, mutate_chance=0.005, network=nn, train=g_train,
                  test=g_test, activation_options=[(tanh, tanh_deriv)], by_loss=False)
-    g.create_population(20)
-    g.crossover(g.population[0], g.population[1])
+    population_size = 100
+    print "pop size = " + str(population_size)
+    g.create_population(population_size)
     g.run(10000)
 
     # nn.train(train_x, train_y, valid_x, valid_y)
