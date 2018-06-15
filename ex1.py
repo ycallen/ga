@@ -18,6 +18,7 @@ tanh_deriv = lambda x: 1 - np.power(np.tanh(x), 2)
 
 
 # softmax
+
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
