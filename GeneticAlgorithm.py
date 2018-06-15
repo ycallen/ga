@@ -196,6 +196,7 @@ class Genetics:
         self.population = list(parents)
 
     def run(self, iterations):
+
         for i in xrange(iterations):
             print str(i)+":",
             self.evolve()
