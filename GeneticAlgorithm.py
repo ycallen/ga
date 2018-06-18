@@ -18,18 +18,18 @@ class Chromosome:
             return np.random.uniform(-eps, eps, s1)
         return np.random.uniform(-eps, eps, (s1, s2))
 
-    def mutate(self):
+    def mutate(self, mutate_rate):
         """
         Randomly mutate one part of the network.
         """
-        self.W1 = self.W1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W1.shape)
-        self.W2 = self.W2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W2.shape)
-        self.W3 = self.W3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.W3.shape)
-        self.b1 = self.b1 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b1.shape[0])
-        self.b2 = self.b2 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b2.shape[0])
-        self.b3 = self.b3 + np.random.binomial(1, 0.1) * np.random.normal(0, 0.1, size=self.b3.shape[0])
+        self.W1 = self.W1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.W1.shape)
+        self.W2 = self.W2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.W2.shape)
+        self.W3 = self.W3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.W3.shape)
+        self.b1 = self.b1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.b1.shape[0])
+        self.b2 = self.b2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.b2.shape[0])
+        self.b3 = self.b3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.b3.shape[0])
 
-    def fitness(self, network, test):
+    def fitness(self, network, test, size=100):
 
         network.W1 = self.W1
         network.W2 = self.W2
@@ -38,7 +38,7 @@ class Chromosome:
         network.b2 = self.b2
         network.b3 = self.b3
 
-        rnd_indices = random.sample(range(len(test[1])), 100)
+        rnd_indices = random.sample(range(len(test[1])), size)
         train_x = np.asarray([test[0][i] for i in rnd_indices])
         train_y = np.asarray([test[1][i] for i in rnd_indices])
 
@@ -127,15 +127,11 @@ class Genetics:
             pop (list): A list of network parameters
         """
 
-        # select randomly 100 examples from the test collection. select the same 100 sample for each chromosome check
-        # in generation
-
-
         # get random activation and derivative functions
         self.inner_network.active_func, self.inner_network.active_func_deriv = random.choice(self.activation_options)
 
         # Get scores for each network7
-        ranked = [(chrom.fitness(self.inner_network, self.test), chrom) for chrom in self.population]
+        ranked = [(chrom.fitness(self.inner_network, self.train), chrom) for chrom in self.population]
         graded = [(r[0][0], r[1]) for r in list(ranked)]
 
         print "acc|loss: {:^3.2f} | {:^3.2f}".format(np.mean([r[0][0] for r in ranked]), np.sum([r[0][1] for r in ranked])),
@@ -190,8 +186,8 @@ class Genetics:
 
         parents.extend(children)
         for individual in parents:
-            if self.mutate_chance > random.random():
-                individual.mutate()
+            # if self.mutate_chance > random.random():
+            individual.mutate(self.mutate_chance)
 
         self.population = list(parents)
 
@@ -199,3 +195,15 @@ class Genetics:
         for i in xrange(iterations):
             print str(i)+":",
             self.evolve()
+
+            if (i % 20  == 0 and i > 0):
+                self.validate_on_test()
+
+
+    def validate_on_test(self):
+        print "** TEST **",
+        print "best_on_test: {:^3.2f}".format(self.best_chrom[1].fitness(self.inner_network, self.test, size=1000)[0])
+        # ranked = [chrom.fitness(self.inner_network, self.test, size=1000) for chrom in self.population]
+        #
+        # print " : avg: {: ^3.2f}, max: {:^3.2f}, best_on_test: {:^3.2f}".format(np.mean(ranked),
+        #                         np.max(ranked), self.best_chrom[1].fitness(self.inner_network, self.test, size=1000)[0])

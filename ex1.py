@@ -198,8 +198,10 @@ def get_data():
 
     # seed = np.random.randint(1, 101)
     # np.random.seed(seed)
-    np.random.shuffle(train_x)
-    np.random.shuffle(train_y)
+    # np.random.shuffle(train_y)
+    # np.random.shuffle(train_x)
+    # np.random.shuffle(test_x)
+    # np.random.shuffle(test_y)
 
     valid_size = int(train_x.shape[0] * 0.2)
     valid_x, valid_y = train_x[:valid_size], train_y[:valid_size]
@@ -225,9 +227,9 @@ if __name__ == '__main__':
     g_train = [train_x, train_y]
     g_test = [test_x, test_y]
 
-    g = Genetics(weights_amount, retain=0.07, random_select=0.00, mutate_chance=0.005, network=nn, train=g_train,
+    g = Genetics(weights_amount, retain=0.07, random_select=0.00, mutate_chance=0.015, network=nn, train=g_train,
                  test=g_test, activation_options=[(tanh, tanh_deriv)], by_loss=False)
-    population_size = 100
+    population_size = 200
     print "pop size = " + str(population_size)
     g.create_population(population_size)
     g.run(10000)
