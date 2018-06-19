@@ -1,19 +1,16 @@
 import numpy as np
 import random
-import sys
 from nn import *
 from utils import *
 
 class Chromosome:
-    def __init__(self, hidden_layers_sz = [128, 64], accuracy = sys.float_info.min, loss = sys.float_info.max):
-        self.W1 = self.initialize_weight(784,hidden_layers_sz[0])
-        self.b1 = self.initialize_weight(hidden_layers_sz[0])
-        self.W2 = self.initialize_weight(hidden_layers_sz[0],hidden_layers_sz[1])
-        self.b2 = self.initialize_weight(hidden_layers_sz[1])
-        self.W3 = self.initialize_weight(hidden_layers_sz[1],10)
+    def __init__(self, layers):
+        self.W1 = self.initialize_weight(784,layers[0])
+        self.b1 = self.initialize_weight(layers[0])
+        self.W2 = self.initialize_weight(layers[0],layers[1])
+        self.b2 = self.initialize_weight(layers[1])
+        self.W3 = self.initialize_weight(layers[1],10)
         self.b3 = self.initialize_weight(10)
-        self.accuracy = accuracy
-        self.loss = loss
 
     def initialize_weight(self, s1, s2=None):
         eps = np.sqrt(6.0 / (s1 + (s2 if s2 is not None else 1)))
@@ -45,18 +42,16 @@ class Chromosome:
         train_x = np.asarray([test[0][i] for i in rnd_indices])
         train_y = np.asarray([test[1][i] for i in rnd_indices])
 
-        metrics = network.get_acc_and_loss(train_x, train_y)
-        self.accuracy = metrics[0]
-        self.loss = metrics[1]
-        return self
+        val = network.get_acc_and_loss(train_x, train_y)
+        return val
 
 
-def select_parents(chromosones):
+def select_parents(graded, selection_type):
     #ranking selection
-    weights = range(len(chromosones), 0, -1)
+    weights = range(len(graded), 0, -1)
     sum_weights = sum(weights)
     weights = [float(w)/float(sum_weights) for w in weights]
-    val  = np.random.choice([c for c in chromosones], 2, True, weights)
+    val  = np.random.choice([element[1] for element in graded], 2, True, weights)
     return val
 
 
@@ -73,9 +68,13 @@ class Genetics:
         self.test = test
         self.train = train
         self.validation = validation
-        self.best_chrom = Chromosome()
+        self.best_chrom = (-1, None)
         self.activation = activation
         self.by_loss = by_loss
+
+        print "retain = " + str(retain)
+        print "mutate_chance = " + str(mutate_chance)
+        print "activation_options = " + str(activation)
 
     def create_population(self, count):
         """Create a population of random networks.
@@ -92,19 +91,19 @@ class Genetics:
         self.population = pop
         return pop
 
-    def crossover_param(self,child_param,father_param,mother_param):
-        #crossover of weight or bias
-        if father_param.shape[0] == 1:
+    def crossover_param(self,child_param,p1_param,p2_param):
+        #crossover of either weight or bias
+        if p1_param.shape[0] == 1:
             if np.random.random() < 0.5:
-                child_param = father_param
+                child_param = p1_param
             else:
-                child_param = mother_param
+                child_param = p2_param
         else:
-            for i in xrange(father_param.shape[0]):
+            for i in xrange(p1_param.shape[0]):
                 if np.random.random() < 0.5:
-                    child_param[i] =  father_param[i]
+                    child_param[i] =  p1_param[i]
                 else:
-                    child_param[i] = mother_param[i]
+                    child_param[i] = p2_param[i]
 
     def crossover(self,p1, p2):
         #crossover by row
@@ -126,30 +125,30 @@ class Genetics:
         # get activation and derivative functions
         self.inner_network.active_func, self.inner_network.active_func_deriv = self.activation
 
-        #Get all metrics for each network
-        chromosones = [chrom.calc_fitness(self.inner_network, self.train) for chrom in self.population]
+        # Get scores for each network7
+        ranked = [(chrom.calc_fitness(self.inner_network, self.train), chrom) for chrom in self.population]
+        graded = [(r[0][0], r[1]) for r in list(ranked)]
 
+        # Sort on the scores.
+        graded = [x for x in sorted(graded, key=lambda g: g[0], reverse=True)]
 
-        #Sort chromosones by accuracy
-        chromosones = [x for x in sorted(chromosones, key=lambda g: g.accuracy, reverse=True)]
+        graded_copy = list(graded)
 
-        # update best chromosone
-        if chromosones[0].accuracy > self.best_chrom.accuracy:
-            self.best_chrom = Chromosome(accuracy=chromosones[0].accuracy, loss=chromosones[0].loss)
+        # update best entity and update graded
+        if graded[0][0] > self.best_chrom[0]:
+            self.best_chrom = graded[0]
 
-        print "avg acc: {:^3.2f} highest acc: {:^3.2f}\n".format(np.mean([c.accuracy for c in chromosones]),
-                                                                 self.best_chrom.accuracy),
+        print "avg acc: {:^3.2f} avg loss: {:^3.2f} max acc: {:^3.2f}\n".format(np.mean([r[0][0] for r in ranked]),
+                                                     np.mean([r[0][1] for r in ranked]),
+                                                     self.best_chrom[0]),
 
-
-        chromosones = list(chromosones)
-
-        accuracies = [c.accuracy for c in chromosones]
+        graded_only_chrom = [x[1] for x in list(graded)]
 
         # Get the number we want to keep for the next gen.
-        retain_length = int(len(accuracies) * self.retain)
+        retain_length = int(len(graded_copy) * self.retain)
 
         # The parents are every network we want to keep.
-        new_pool = chromosones[:retain_length]
+        new_pool = graded_only_chrom[:retain_length]
 
         # Now find out how many spots we have left to fill.
         desired_length = len(self.population) - len(new_pool)
@@ -158,7 +157,8 @@ class Genetics:
         # Add children, which are bred from two remaining networks.
         while len(children) < desired_length:
 
-            parents = select_parents(chromosones)
+            # Get a random mom and dad.
+            parents = select_parents(graded_copy, 'ranking')
 
             p1 = parents[0]
             p2 = parents[1]
@@ -180,16 +180,16 @@ class Genetics:
             print str(i)+":",
             self.evolve()
 
-            if (i % 100  == 0 and i > 0):
+            if (i % 10  == 0 and i > 0):
                 self.validate_on_test()
 
 
     def validate_on_test(self):
         print "*******************************************************************"
         print "DEVEL :",
-        print "best_on_devel : {:^3.2f}".format(self.best_chrom.calc_fitness(self.inner_network, self.validation, len(self.validation[0])).accuracy)
+        print "best_on_devel: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.validation, len(self.validation[0]))[0])
         print "TEST  :",
-        print "best_on_test  : {:^3.2f}".format(self.best_chrom.calc_fitness(self.inner_network, self.test, len(self.test[0])).accuracy)
+        print "best_on_test: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
         print "*******************************************************************"
         # ranked = [chrom.fitness(self.inner_network, self.test, size=1000) for chrom in self.population]
         #
