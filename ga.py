@@ -68,7 +68,7 @@ class Genetics:
         self.test = test
         self.train = train
         self.validation = validation
-        self.best_chrom = (-1, None)
+        self.best_chroms = [(-1, None), (-1, None), (-1, None)]
         self.activation = activation
         self.by_loss = by_loss
 
@@ -135,12 +135,14 @@ class Genetics:
         graded_copy = list(graded)
 
         # update best entity and update graded
-        if graded[0][0] > self.best_chrom[0]:
-            self.best_chrom = graded[0]
+        if graded[0][0] >= min(self.best_chroms, key=lambda x: x[0])[0]:
+            self.best_chroms.remove(min(self.best_chroms, key=lambda x: x[0]))
+            self.best_chroms.append(graded[0])
 
-        print "avg acc: {:^3.2f} avg loss: {:^3.2f} max acc: {:^3.2f}\n".format(np.mean([r[0][0] for r in ranked]),
+        print "avg acc: {:^3.2f} avg loss: {:^3.2f} max acc: {:^3.2f}".format(np.mean([r[0][0] for r in ranked]),
                                                      np.mean([r[0][1] for r in ranked]),
-                                                     self.best_chrom[0]),
+                                                                                max(self.best_chroms,
+                                                                                    key=lambda x: x[0])[0])
 
         graded_only_chrom = [x[1] for x in list(graded)]
 
@@ -187,9 +189,19 @@ class Genetics:
     def validate_on_test(self):
         print "*******************************************************************"
         print "DEVEL :",
-        print "best_on_devel: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.validation, len(self.validation[0]))[0])
+        print "best_on_devel: {:^3.2f}, {:^3.2f}, {:^3.2f}".format(self.best_chroms[0][1].calc_fitness(self.inner_network, self.validation,
+                                                                                  len(self.validation[0]))[0],
+                                               self.best_chroms[1][1].calc_fitness(self.inner_network, self.validation,
+                                                                                  len(self.validation[0]))[0],
+                                               self.best_chroms[2][1].calc_fitness(self.inner_network, self.validation,
+                                                                                  len(self.validation[0]))[0])
         print "TEST  :",
-        print "best_on_test: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
+        print "best_on_test: {:^3.2f}, {:^3.2f}, {:^3.2f}".format(self.best_chroms[0][1].calc_fitness(self.inner_network, self.test,
+                                                                                 len(self.test[0]))[0],
+                                              self.best_chroms[1][1].calc_fitness(self.inner_network, self.test,
+                                                                                 len(self.test[0]))[0],
+                                              self.best_chroms[2][1].calc_fitness(self.inner_network, self.test,
+                                                                                 len(self.test[0]))[0])
         print "*******************************************************************"
         # ranked = [chrom.fitness(self.inner_network, self.test, size=1000) for chrom in self.population]
         #
