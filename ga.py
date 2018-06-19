@@ -126,7 +126,7 @@ class Genetics:
         self.inner_network.active_func, self.inner_network.active_func_deriv = self.activation
 
         # Get scores for each network7
-        ranked = [(chrom.calc_fitness(self.inner_network, self.train), chrom) for chrom in self.population]
+        ranked = [(chrom.calc_fitness(self.inner_network, self.train, 150), chrom) for chrom in self.population]
         graded = [(r[0][0], r[1]) for r in list(ranked)]
 
         # Sort on the scores.
@@ -209,7 +209,7 @@ def main():
     test_set = [test_x, test_y]
 
 
-    g = Genetics(hidden_layers_sz = hidden_layers_sz, retain=0.05, random_select=0.00, mutate_chance=0.01, network=nn, train=train_set,
+    g = Genetics(hidden_layers_sz = hidden_layers_sz, retain=0.06, random_select=0.00, mutate_chance=0.02, network=nn, train=train_set,
                  validation=valid_set, test=test_set, activation=(tanh, tanh_deriv), by_loss=False)
 
     population_size = 100

@@ -1,9 +1,8 @@
-from sklearn.datasets import fetch_mldata
 from numpy import arange
 import random
 import numpy as np
-import collections
-
+import mnist
+from sklearn.utils import shuffle
 
 # sigmoid activation function
 sigmoid = lambda x: 1 / (1 + np.exp(-x))
@@ -25,22 +24,17 @@ def softmax(x):
     return e_x / e_x.sum(axis=0)
 
 def get_data():
-    mnist = fetch_mldata('MNIST original')
+    mnist_loader = mnist.MNIST(return_type="numpy")
 
-    n_train = 60000
-    n_test = 10000
-
-    train_idx = arange(0, n_train)
-    random.shuffle(train_idx)
-    test_idx = arange(n_train, n_train + n_test)
-    random.shuffle(test_idx)
-
-    train_x, train_y = mnist.data[train_idx], mnist.target[train_idx]
-    test_x, test_y = mnist.data[test_idx], mnist.target[test_idx]
+    train_x, train_y = mnist_loader.load_training()
     train_x = train_x / 255.0
+
+    test_x, test_y = mnist_loader.load_testing()
     test_x = test_x / 255.0
 
-    valid_size = int(train_x.shape[0] * 0.2)
+    train_x, train_y = shuffle(train_x, train_y)
+
+    valid_size = 10000
     valid_x, valid_y = train_x[:valid_size], train_y[:valid_size]
     train_x, train_y = train_x[valid_size:], train_y[valid_size:]
 

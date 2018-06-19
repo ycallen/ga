@@ -1,4 +1,3 @@
-from sklearn.datasets import fetch_mldata
 from numpy import arange
 import numpy as np
 from utils import *
@@ -6,16 +5,16 @@ from utils import *
 class NN:
     # hyper parameters
     def __init__(self, hidden_layers_sz, epochs=0, lr=0, activation=None):
-        self.hidden_layers_sz = hidden_layers_sz
-        self.W1 = np.random.uniform(-0.1, 0.1, (hidden_layers_sz[0], 784))
+        self.W1 = np.random.uniform(-0.1, 0.1, (784, hidden_layers_sz[0]))
         self.b1 = np.random.uniform(-0.1, 0.1, hidden_layers_sz[0])
-        self.W2 = np.random.uniform(-0.1, 0.1, (hidden_layers_sz[1], hidden_layers_sz[0]))
+        self.W2 = np.random.uniform(-0.1, 0.1, (hidden_layers_sz[0], hidden_layers_sz[1]))
         self.b2 = np.random.uniform(-0.1, 0.1, hidden_layers_sz[1])
-        self.W3 = np.random.uniform(-0.1, 0.1, (10, hidden_layers_sz[1]))
+        self.W3 = np.random.uniform(-0.1, 0.1, (hidden_layers_sz[1], 10))
         self.b3 = np.random.uniform(-0.1, 0.1, 10)
         self.epochs = epochs
-        self.activation = activation
         self.lr = lr
+        self.activation = activation
+        self.hidden_layers_sz = hidden_layers_sz
 
     def clone(self, network):
         self.hidden_layers_sz = network.hidden_layers_sz
@@ -64,19 +63,23 @@ class NN:
     # backward propagation
     def bprop(self, x, y, fprop_cache):
         z1, h1, z2, h2, z3, h3 = [fprop_cache[key] for key in ('z1', 'h1', 'z2', 'h2', 'z3', 'h3')]
-        active_deriv_func = self.activation[1]
+
+        active_func_deriv = self.activation[1]
+
         db3 = np.copy(h3)
         db3[int(y)] -= 1
-        dW3 = np.outer(db3, h2.T)
-        dh2 = db3.T.dot(self.W3)
-        db2 = dh2.T * active_deriv_func(z2)
-        dW2 = db2.reshape(len(db2), 1).dot(h1.reshape(len(h1), 1).T)
-        dh1 = db2.T.dot(self.W2)
-        db1 = dh1.T * active_deriv_func(z1)
-        dW1 = db1.reshape(len(db1), 1).dot(x.reshape(len(x), 1).T)
+        dW3 = np.outer(db3, h2.T).T
+        dh2 = self.W3.dot(db3.T)
+        db2 = dh2.T * active_func_deriv(z2)
+        dW2 = db2.reshape(len(db2), 1).dot(h1.reshape(len(h1), 1).T).T
+        dh1 = self.W2.dot(db2.T)
+        db1 = dh1.T * active_func_deriv(z1)
+        dW1 = db1.reshape(len(db1), 1).dot(x.reshape(len(x), 1).T).T
 
 
         return {'W1': dW1, 'b1': db1, 'W2': dW2, 'b2': db2, 'W3': dW3, 'b3': db3}
+
+
 
     # update weights schotastic gradient descent
     def update_weights_sgd(self, bprop_cache):
@@ -120,52 +123,12 @@ class NN:
                    float(valid_correct) / len(valid_x),
                    train_sum_loss))
 
-
-def get_data():
-    mnist = fetch_mldata('MNIST original')
-
-    n_train = 60000
-    n_test = 10000
-
-    train_idx = arange(0, n_train)
-    random.shuffle(train_idx)
-    test_idx = arange(n_train, n_train + n_test)
-    random.shuffle(test_idx)
-
-    train_x, train_y = mnist.data[train_idx], mnist.target[train_idx]
-    test_x, test_y = mnist.data[test_idx], mnist.target[test_idx]
-    train_x = train_x / 255.0
-    test_x = test_x / 255.0
-
-    valid_size = int(train_x.shape[0] * 0.2)
-    valid_x, valid_y = train_x[:valid_size], train_y[:valid_size]
-    train_x, train_y = train_x[valid_size:], train_y[valid_size:]
-
-    return train_x, train_y, valid_x, valid_y, test_x, test_y
-
 def main():
     train_x, train_y, valid_x, valid_y, test_x, test_y = get_data()
-    # split the training data into 80% training and 20% validation
-    activation = [tanh, tanh_deriv]
-    epochs = 50
-    lr = 0.01
-    hidden_layers_sz = [128, 64]
 
-    nn = NN(hidden_layers_sz=hidden_layers_sz, activation=activation)
+    nn = NN(hidden_layers_sz=[200, 100], epochs=50, lr=0.01, activation=[tanh, tanh_deriv])
+    nn.train(train_x, train_y, valid_x, valid_y)
+    nn.get_test_acc(test_x, test_y)
 
-    train_set = [train_x, train_y]
-    valid_set = [valid_x, valid_y]
-    test_set = [test_x, test_y]
-    layers = [784, 128, 64, 10]
-
-    #g = Genetics(layers=layers, retain=0.05, random_select=0.00, mutate_chance=0.01, network=nn, train=train_set,
-    #             validation=valid_set, test=test_set, activation=(tanh, tanh_deriv), by_loss=False)
-    population_size = 100
-    print "pop size = " + str(population_size)
-    #g.create_population(population_size)
-    #g.run(10000)
-
-    # nn.train(train_x, train_y, valid_x, valid_y)
-    # nn.get_test_acc(test_x,test_y)
 if __name__ == '__main__':
     main()
