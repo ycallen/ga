@@ -1,3 +1,4 @@
+from sklearn.datasets import fetch_mldata
 from numpy import arange
 import numpy as np
 from utils import *
@@ -5,12 +6,12 @@ from utils import *
 class NN:
     # hyper parameters
     def __init__(self, hidden_layers_sz, epochs=0, lr=0, activation=None):
-        self.W1 = np.random.uniform(-0.1, 0.1, (784, hidden_layers_sz[0]))
-        self.b1 = np.random.uniform(-0.1, 0.1, hidden_layers_sz[0])
-        self.W2 = np.random.uniform(-0.1, 0.1, (hidden_layers_sz[0], hidden_layers_sz[1]))
-        self.b2 = np.random.uniform(-0.1, 0.1, hidden_layers_sz[1])
-        self.W3 = np.random.uniform(-0.1, 0.1, (hidden_layers_sz[1], 10))
-        self.b3 = np.random.uniform(-0.1, 0.1, 10)
+        self.W1 = np.random.uniform(-0.01, 0.01, (784, hidden_layers_sz[0]))
+        self.b1 = np.random.uniform(-0.01, 0.01, hidden_layers_sz[0])
+        self.W2 = np.random.uniform(-0.01, 0.01, (hidden_layers_sz[0], hidden_layers_sz[1]))
+        self.b2 = np.random.uniform(-0.01, 0.01, hidden_layers_sz[1])
+        self.W3 = np.random.uniform(-0.01, 0.01, (hidden_layers_sz[1], 10))
+        self.b3 = np.random.uniform(-0.01, 0.01, 10)
         self.epochs = epochs
         self.lr = lr
         self.activation = activation
@@ -40,19 +41,25 @@ class NN:
         ret = {'z1': z1, 'h1': h1, 'z2': z2, 'h2': h2, 'z3': z3, 'h3': h3}
         return ret
 
-    def get_acc_and_loss(self, test_x, test_y):
-
+    def get_acc_and_loss(self, test_x, test_y, filename = None):
+        predictions = []
         indexes = list(range(test_x.shape[0]))
         correct = 0.0
         total_loss = 0.0
         for i in indexes:
             fprop_cache = self.fprop(test_x[i])
             prediction = str(np.argmax(fprop_cache['h3']))
+            predictions.append(prediction)
             y = test_y[i]
             if y == int(prediction):
                 correct = correct + 1
             loss = -np.log(fprop_cache['h3'][int(y)])
             total_loss += loss
+
+        if filename is not None:
+            with open(filename, 'wb') as file:
+                for i in xrange(len(predictions)):
+                    file.write(predictions[i] + "\n")
 
         accuracy = 100.0 * correct / len(test_x)
         loss = total_loss / len(test_x)
@@ -69,9 +76,11 @@ class NN:
         db3 = np.copy(h3)
         db3[int(y)] -= 1
         dW3 = np.outer(db3, h2.T).T
+
         dh2 = self.W3.dot(db3.T)
         db2 = dh2.T * active_func_deriv(z2)
         dW2 = db2.reshape(len(db2), 1).dot(h1.reshape(len(h1), 1).T).T
+
         dh1 = self.W2.dot(db2.T)
         db1 = dh1.T * active_func_deriv(z1)
         dW1 = db1.reshape(len(db1), 1).dot(x.reshape(len(x), 1).T).T
@@ -126,9 +135,9 @@ class NN:
 def main():
     train_x, train_y, valid_x, valid_y, test_x, test_y = get_data()
 
-    nn = NN(hidden_layers_sz=[200, 100], epochs=50, lr=0.01, activation=[tanh, tanh_deriv])
+    nn = NN(hidden_layers_sz=[200, 100], epochs=20, lr=0.01, activation=[tanh, tanh_deriv])
     nn.train(train_x, train_y, valid_x, valid_y)
-    nn.get_test_acc(test_x, test_y)
+    nn.get_acc_and_loss(test_x, test_y, "nn_prediections.txt")
 
 if __name__ == '__main__':
     main()
