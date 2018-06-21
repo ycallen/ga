@@ -1,7 +1,11 @@
 import numpy as np
 import random
+
+import time
+
 from nn import *
 from utils import *
+import pickle
 
 class Chromosome:
     def __init__(self, layers):
@@ -18,18 +22,18 @@ class Chromosome:
             return np.random.uniform(-eps, eps, s1)
         return np.random.uniform(-eps, eps, (s1, s2))
 
-    def mutate(self, mutate_rate):
+    def mutate(self, mutate_rate, size):
         """
         Randomly mutate one part of the network.
         """
-        self.W1 = self.W1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.W1.shape)
-        self.W2 = self.W2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.W2.shape)
-        self.W3 = self.W3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.W3.shape)
-        self.b1 = self.b1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.b1.shape[0])
-        self.b2 = self.b2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.b2.shape[0])
-        self.b3 = self.b3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, 0.1, size=self.b3.shape[0])
+        self.W1 = self.W1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.W1.shape)
+        self.W2 = self.W2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.W2.shape)
+        self.W3 = self.W3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.W3.shape)
+        self.b1 = self.b1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.b1.shape[0])
+        self.b2 = self.b2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.b2.shape[0])
+        self.b3 = self.b3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.b3.shape[0])
 
-    def calc_fitness(self, network, test, size=100):
+    def calc_fitness(self, network, train, size=100):
 
         network.W1 = self.W1
         network.W2 = self.W2
@@ -38,9 +42,10 @@ class Chromosome:
         network.b2 = self.b2
         network.b3 = self.b3
 
-        rnd_indices = random.sample(range(len(test[1])), size)
-        train_x = np.asarray([test[0][i] for i in rnd_indices])
-        train_y = np.asarray([test[1][i] for i in rnd_indices])
+        #rnd_indices = random.sample(range(len(train[1])), size)
+        #train_x = np.asarray([train[0][i] for i in rnd_indices])
+        #train_y = np.asarray([train[1][i] for i in rnd_indices])
+        train_x, train_y = train
 
         val = network.get_acc_and_loss(train_x, train_y)
         return val
@@ -57,7 +62,7 @@ def select_parents(graded, selection_type):
 
 class Genetics:
     def __init__(self, hidden_layers_sz, retain, random_select, mutate_chance, network, train, validation, test,
-                 activation, by_loss):
+                 activation, mutate_size):
         self.population = []
         self.hidden_layers_sz = hidden_layers_sz
         self.retain = retain
@@ -68,13 +73,15 @@ class Genetics:
         self.test = test
         self.train = train
         self.validation = validation
-        self.best_chroms = [(-1, None), (-1, None), (-1, None)]
+        self.best_chrom = (-1, None)
         self.activation = activation
-        self.by_loss = by_loss
+        self.best_devel = (-1, None)
+        self.mutate_size = mutate_size
 
         print "retain = " + str(retain)
         print "mutate_chance = " + str(mutate_chance)
-        print "activation_options = " + str(activation)
+        print "mutate_size = " + str(mutate_size)
+        print "random select = " + str(random_select)
 
     def create_population(self, count):
         """Create a population of random networks.
@@ -125,8 +132,12 @@ class Genetics:
         # get activation and derivative functions
         self.inner_network.active_func, self.inner_network.active_func_deriv = self.activation
 
+        rnd_indices = random.sample(range(len(self.train[1])), 100)
+        train_x = np.asarray([self.train[0][i] for i in rnd_indices])
+        train_y = np.asarray([self.train[1][i] for i in rnd_indices])
+        train = (train_x, train_y)
         # Get scores for each network7
-        ranked = [(chrom.calc_fitness(self.inner_network, self.train, 150), chrom) for chrom in self.population]
+        ranked = [(chrom.calc_fitness(self.inner_network, train, 100), chrom) for chrom in self.population]
         graded = [(r[0][0], r[1]) for r in list(ranked)]
 
         # Sort on the scores.
@@ -134,15 +145,9 @@ class Genetics:
 
         graded_copy = list(graded)
 
-        # update best entity and update graded
-        if graded[0][0] >= min(self.best_chroms, key=lambda x: x[0])[0]:
-            self.best_chroms.remove(min(self.best_chroms, key=lambda x: x[0]))
-            self.best_chroms.append(graded[0])
-
-        print "avg acc: {:^3.2f} avg loss: {:^3.2f} max acc: {:^3.2f}".format(np.mean([r[0][0] for r in ranked]),
+        print "avg acc: {:^3.2f} avg loss: {:^3.2f} max acc: {:^3.2f}\n".format(np.mean([r[0][0] for r in ranked]),
                                                      np.mean([r[0][1] for r in ranked]),
-                                                                                max(self.best_chroms,
-                                                                                    key=lambda x: x[0])[0])
+                                                     graded[0][0]),
 
         graded_only_chrom = [x[1] for x in list(graded)]
 
@@ -152,7 +157,14 @@ class Genetics:
         # The parents are every network we want to keep.
         new_pool = graded_only_chrom[:retain_length]
 
-        # Now find out how many spots we have left to fill.
+        # save the best in each iteration
+        self.best_chrom = graded[0]
+
+        for individual in graded_only_chrom[retain_length:]:
+            if self.random_select > random.random():
+                new_pool.append(individual)
+
+        # Now findcalc out how many spots we have left to fill.
         desired_length = len(self.population) - len(new_pool)
 
         children = []
@@ -165,16 +177,15 @@ class Genetics:
             p1 = parents[0]
             p2 = parents[1]
 
+            # create child, and with probability mutate it
             child = self.crossover(p1, p2)
+            child.mutate(self.mutate_chance, self.mutate_size)
 
             # Add the children one at a time.
             if len(children) < desired_length:
                 children.append(child)
 
         new_pool.extend(children)
-        for individual in new_pool:
-            individual.mutate(self.mutate_chance)
-
         self.population = list(new_pool)
 
     def run(self, iterations):
@@ -182,31 +193,30 @@ class Genetics:
             print str(i)+":",
             self.evolve()
 
-            if (i % 10  == 0 and i > 0):
+            if i % 100 == 0 and i > 0:
                 self.validate_on_test()
 
+        # print best to file
+        name = "best_devel_weights_" + str(time.time())
+        print "writing to file " + name
+        with open(name, 'wb') as file:
+            pickle.dump(self.best_devel[1], file)
+        # with open("best_devel_weights", 'r') as file:
+        #     temp = pickle.load(file)
+        #     print "h"
 
     def validate_on_test(self):
         print "*******************************************************************"
         print "DEVEL :",
-        print "best_on_devel: {:^3.2f}, {:^3.2f}, {:^3.2f}".format(self.best_chroms[0][1].calc_fitness(self.inner_network, self.validation,
-                                                                                  len(self.validation[0]))[0],
-                                               self.best_chroms[1][1].calc_fitness(self.inner_network, self.validation,
-                                                                                  len(self.validation[0]))[0],
-                                               self.best_chroms[2][1].calc_fitness(self.inner_network, self.validation,
-                                                                                  len(self.validation[0]))[0])
+        latest_devel_acc = self.best_chrom[1].calc_fitness(self.inner_network, self.validation, len(self.validation[0]))[0]
+        print "best_on_devel: {:^3.2f}".format(latest_devel_acc)
+        if latest_devel_acc >= self.best_devel[0]:
+            self.best_devel = self.best_chrom
         print "TEST  :",
-        print "best_on_test: {:^3.2f}, {:^3.2f}, {:^3.2f}".format(self.best_chroms[0][1].calc_fitness(self.inner_network, self.test,
-                                                                                 len(self.test[0]))[0],
-                                              self.best_chroms[1][1].calc_fitness(self.inner_network, self.test,
-                                                                                 len(self.test[0]))[0],
-                                              self.best_chroms[2][1].calc_fitness(self.inner_network, self.test,
-                                                                                 len(self.test[0]))[0])
+        print "best_on_test: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
+        print "max acc: {:^3.2f}\n".format(self.best_chrom[0]),
         print "*******************************************************************"
-        # ranked = [chrom.fitness(self.inner_network, self.test, size=1000) for chrom in self.population]
-        #
-        # print " : avg: {: ^3.2f}, max: {:^3.2f}, best_on_test: {:^3.2f}".format(np.mean(ranked),
-        #                         np.max(ranked), self.best_chrom[1].fitness(self.inner_network, self.test, size=1000)[0])
+
 
 def main():
     train_x, train_y, valid_x, valid_y, test_x, test_y = get_data()
@@ -214,15 +224,22 @@ def main():
     activation = [tanh, tanh_deriv]
     hidden_layers_sz = [128, 64]
 
-    nn = NN(hidden_layers_sz= hidden_layers_sz, activation= activation)
+    nn = NN(hidden_layers_sz=hidden_layers_sz, activation=activation)
 
     train_set = [train_x, train_y]
     valid_set = [valid_x, valid_y]
     test_set = [test_x, test_y]
 
-
-    g = Genetics(hidden_layers_sz = hidden_layers_sz, retain=0.06, random_select=0.00, mutate_chance=0.02, network=nn, train=train_set,
-                 validation=valid_set, test=test_set, activation=(tanh, tanh_deriv), by_loss=False)
+    g = Genetics(hidden_layers_sz=hidden_layers_sz,
+                 retain=0.2,
+                 random_select=0.01,
+                 mutate_chance=0.3,
+                 mutate_size=0.01,
+                 network=nn,
+                 train=train_set,
+                 validation=valid_set,
+                 test=test_set,
+                 activation=(tanh, tanh_deriv))
 
     population_size = 100
     print "pop size = " + str(population_size)
@@ -231,5 +248,7 @@ def main():
 
     # nn.train(train_x, train_y, valid_x, valid_y)
     # nn.get_test_acc(test_x,test_y)
+
+
 if __name__ == '__main__':
     main()
