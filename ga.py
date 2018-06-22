@@ -201,9 +201,11 @@ class Genetics:
         print "writing to file " + name
         with open(name, 'wb') as file:
             pickle.dump(self.best_devel[1], file)
-        # with open("best_devel_weights", 'r') as file:
+        # with open("best_devel_weights_1529639442.52", 'r') as file:
         #     temp = pickle.load(file)
-        #     print "h"
+        #     print "best_on_test: {:^3.2f}".format(
+        #         temp.calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
+
 
     def validate_on_test(self):
         print "*******************************************************************"
@@ -211,7 +213,7 @@ class Genetics:
         latest_devel_acc = self.best_chrom[1].calc_fitness(self.inner_network, self.validation, len(self.validation[0]))[0]
         print "best_on_devel: {:^3.2f}".format(latest_devel_acc)
         if latest_devel_acc >= self.best_devel[0]:
-            self.best_devel = self.best_chrom
+            self.best_devel = (latest_devel_acc, self.best_chrom[1])
         print "TEST  :",
         print "best_on_test: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
         print "max acc: {:^3.2f}\n".format(self.best_chrom[0]),
@@ -232,8 +234,8 @@ def main():
 
     g = Genetics(hidden_layers_sz=hidden_layers_sz,
                  retain=0.2,
-                 random_select=0.01,
-                 mutate_chance=0.3,
+                 random_select=0.02,
+                 mutate_chance=0.25,
                  mutate_size=0.01,
                  network=nn,
                  train=train_set,
