@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import sys
 
 import time
 
@@ -232,18 +233,33 @@ def main():
     valid_set = [valid_x, valid_y]
     test_set = [test_x, test_y]
 
+    # if command line arguments are given, use them
+    if len(sys.argv) == 6:
+        print "parsing command line arguments..."
+        population_size = int(sys.argv[1])
+        retain = float(sys.argv[2])
+        random_select = float(sys.argv[3])
+        mutate_change = float(sys.argv[4])
+        mutate_size = float(sys.argv[5])
+    else:
+        retain = 0.2
+        random_select = 0.03
+        mutate_change = 0.2
+        mutate_size = 0.012
+        population_size = 150
+
     g = Genetics(hidden_layers_sz=hidden_layers_sz,
-                 retain=0.2,
-                 random_select=0.02,
-                 mutate_chance=0.25,
-                 mutate_size=0.01,
+                 retain=retain,
+                 random_select=random_select,
+                 mutate_chance=mutate_change,
+                 mutate_size=mutate_size,
                  network=nn,
                  train=train_set,
                  validation=valid_set,
                  test=test_set,
                  activation=(tanh, tanh_deriv))
 
-    population_size = 100
+
     print "pop size = " + str(population_size)
     g.create_population(population_size)
     g.run(10000)
