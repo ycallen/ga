@@ -1,7 +1,6 @@
 import numpy as np
 import random
 import sys
-
 import time
 
 from nn import *
@@ -90,14 +89,7 @@ class Genetics:
             count (int): Number of networks to generate, aka the
                 size of the population
         """
-        pop = []
-        for _ in range(0, count):
-            # Create a random chromosome, which is all the weights of the network
-            # Add the network to our population.
-            pop.append(Chromosome(self.hidden_layers_sz))
-
-        self.population = pop
-        return pop
+        self.population = [Chromosome(self.hidden_layers_sz) for _ in xrange(0, count)]
 
     def crossover_param(self,child_param,p1_param,p2_param):
         #crossover of either weight or bias
