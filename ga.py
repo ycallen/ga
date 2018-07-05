@@ -7,13 +7,14 @@ from nn import *
 from utils import *
 import pickle
 
+
 class Chromosome:
     def __init__(self, layers):
-        self.W1 = self.initialize_weight(784,layers[0])
+        self.W1 = self.initialize_weight(784, layers[0])
         self.b1 = self.initialize_weight(layers[0])
-        self.W2 = self.initialize_weight(layers[0],layers[1])
+        self.W2 = self.initialize_weight(layers[0], layers[1])
         self.b2 = self.initialize_weight(layers[1])
-        self.W3 = self.initialize_weight(layers[1],10)
+        self.W3 = self.initialize_weight(layers[1], 10)
         self.b3 = self.initialize_weight(10)
 
     def initialize_weight(self, s1, s2=None):
@@ -26,15 +27,15 @@ class Chromosome:
         """
         Randomly mutate one part of the network.
         """
-        self.W1 = self.W1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.W1.shape)
-        self.W2 = self.W2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.W2.shape)
-        self.W3 = self.W3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.W3.shape)
-        self.b1 = self.b1 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.b1.shape[0])
-        self.b2 = self.b2 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.b2.shape[0])
-        self.b3 = self.b3 + np.random.binomial(1, mutate_rate) * np.random.normal(0, size, size=self.b3.shape[0])
+
+        self.W1 = self.W1 + np.outer(np.random.binomial(1, mutate_rate, size=self.W1.shape[0]), np.ones(self.W1.shape[1])) * np.random.normal(0, size, size=self.W1.shape)
+        self.W2 = self.W2 + np.outer(np.random.binomial(1, mutate_rate, size=self.W2.shape[0]), np.ones(self.W2.shape[1])) * np.random.normal(0, size, size=self.W2.shape)
+        self.W3 = self.W3 + np.outer(np.random.binomial(1, mutate_rate, size=self.W3.shape[0]), np.ones(self.W3.shape[1])) * np.random.normal(0, size, size=self.W3.shape)
+        self.b1 = self.b1 + np.random.binomial(1, mutate_rate, size=self.b1.shape[0]) * np.random.normal(0, size, size=self.b1.shape[0])
+        self.b2 = self.b2 + np.random.binomial(1, mutate_rate, size=self.b2.shape[0]) * np.random.normal(0, size, size=self.b2.shape[0])
+        self.b3 = self.b3 + np.random.binomial(1, mutate_rate, size=self.b3.shape[0]) * np.random.normal(0, size, size=self.b3.shape[0])
 
     def calc_fitness(self, network, train, size=100):
-
         network.W1 = self.W1
         network.W2 = self.W2
         network.W3 = self.W3
@@ -42,9 +43,9 @@ class Chromosome:
         network.b2 = self.b2
         network.b3 = self.b3
 
-        #rnd_indices = random.sample(range(len(train[1])), size)
-        #train_x = np.asarray([train[0][i] for i in rnd_indices])
-        #train_y = np.asarray([train[1][i] for i in rnd_indices])
+        # rnd_indices = random.sample(range(len(train[1])), size)
+        # train_x = np.asarray([train[0][i] for i in rnd_indices])
+        # train_y = np.asarray([train[1][i] for i in rnd_indices])
         train_x, train_y = train
 
         val = network.get_acc_and_loss(train_x, train_y)
@@ -52,17 +53,17 @@ class Chromosome:
 
 
 def select_parents(graded, selection_type):
-    #ranking selection
+    # ranking selection
     weights = range(len(graded), 0, -1)
     sum_weights = sum(weights)
-    weights = [float(w)/float(sum_weights) for w in weights]
-    val  = np.random.choice([element[1] for element in graded], 2, True, weights)
+    weights = [float(w) / float(sum_weights) for w in weights]
+    val = np.random.choice([element[1] for element in graded], 2, True, weights)
     return val
 
 
 class Genetics:
     def __init__(self, hidden_layers_sz, retain, random_select, mutate_chance, network, train, validation, test,
-                 activation, mutate_size):
+                 activation, mutate_size, decay_factor):
         self.population = []
         self.hidden_layers_sz = hidden_layers_sz
         self.retain = retain
@@ -77,11 +78,13 @@ class Genetics:
         self.activation = activation
         self.best_devel = (-1, None)
         self.mutate_size = mutate_size
+        self.decay_factor = decay_factor
 
         print "retain = " + str(retain)
         print "mutate_chance = " + str(mutate_chance)
         print "mutate_size = " + str(mutate_size)
         print "random select = " + str(random_select)
+        print "decay_factor = " + str(decay_factor)
 
     def create_population(self, count):
         """Create a population of random networks.
@@ -91,8 +94,8 @@ class Genetics:
         """
         self.population = [Chromosome(self.hidden_layers_sz) for _ in xrange(0, count)]
 
-    def crossover_param(self,child_param,p1_param,p2_param):
-        #crossover of either weight or bias
+    def crossover_param(self, child_param, p1_param, p2_param):
+        # crossover of either weight or bias
         if p1_param.shape[0] == 1:
             if np.random.random() < 0.5:
                 child_param = p1_param
@@ -101,12 +104,12 @@ class Genetics:
         else:
             for i in xrange(p1_param.shape[0]):
                 if np.random.random() < 0.5:
-                    child_param[i] =  p1_param[i]
+                    child_param[i] = p1_param[i]
                 else:
                     child_param[i] = p2_param[i]
 
-    def crossover(self,p1, p2):
-        #crossover by row
+    def crossover(self, p1, p2):
+        # crossover by row
         child = Chromosome(self.hidden_layers_sz)
         self.crossover_param(child.W1, p1.W1, p2.W1)
         self.crossover_param(child.b1, p1.b1, p2.b1)
@@ -139,8 +142,8 @@ class Genetics:
         graded_copy = list(graded)
 
         print "avg acc: {:^3.2f} avg loss: {:^3.2f} max acc: {:^3.2f}\n".format(np.mean([r[0][0] for r in ranked]),
-                                                     np.mean([r[0][1] for r in ranked]),
-                                                     graded[0][0]),
+                                                                                np.mean([r[0][1] for r in ranked]),
+                                                                                graded[0][0]),
 
         graded_only_chrom = [x[1] for x in list(graded)]
 
@@ -157,7 +160,7 @@ class Genetics:
             if self.random_select > random.random():
                 new_pool.append(individual)
 
-        # Now findcalc out how many spots we have left to fill.
+        # Now calc out how many spots we have left to fill.
         desired_length = len(self.population) - len(new_pool)
 
         children = []
@@ -183,34 +186,37 @@ class Genetics:
 
     def run(self, iterations):
         for i in xrange(iterations):
-            print str(i)+":",
+            print str(i) + ":",
             self.evolve()
 
             if i % 100 == 0 and i > 0:
                 self.validate_on_test()
+
+            # deacay mutate change
+            if i % 1000 == 999:
+                self.mutate_chance -= self.decay_factor
 
         # print best to file
         name = "best_devel_weights_" + str(time.time())
         print "writing to file " + name
         with open(name, 'wb') as file:
             pickle.dump(self.best_devel[1], file)
+
         # with open("best_devel_weights_1529639442.52", 'r') as file:
         #     temp = pickle.load(file)
         #     print "best_on_test: {:^3.2f}".format(
         #         temp.calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
 
-
     def validate_on_test(self):
-        print "*******************************************************************"
-        print "DEVEL :",
-        latest_devel_acc = self.best_chrom[1].calc_fitness(self.inner_network, self.validation, len(self.validation[0]))[0]
+        print "*******************************************************************\n DEVEL :",
+        latest_devel_acc = \
+        self.best_chrom[1].calc_fitness(self.inner_network, self.validation, len(self.validation[0]))[0]
         print "best_on_devel: {:^3.2f}".format(latest_devel_acc)
         if latest_devel_acc >= self.best_devel[0]:
             self.best_devel = (latest_devel_acc, self.best_chrom[1])
-        print "TEST  :",
-        print "best_on_test: {:^3.2f}".format(self.best_chrom[1].calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
-        print "max acc: {:^3.2f}\n".format(self.best_chrom[0]),
-        print "*******************************************************************"
+        print "TEST  :best_on_test: {:^3.2f}".format(
+            self.best_chrom[1].calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
+        print "max acc: {:^3.2f}\n*******************************************************************".format(self.best_chrom[0])
 
 
 def main():
@@ -226,13 +232,14 @@ def main():
     test_set = [test_x, test_y]
 
     # if command line arguments are given, use them
-    if len(sys.argv) == 6:
+    if len(sys.argv) == 7:
         print "parsing command line arguments..."
         population_size = int(sys.argv[1])
         retain = float(sys.argv[2])
         random_select = float(sys.argv[3])
         mutate_change = float(sys.argv[4])
         mutate_size = float(sys.argv[5])
+        decay_factor = float(sys.argv[6])
     else:
         retain = 0.2
         random_select = 0.03
@@ -249,8 +256,8 @@ def main():
                  train=train_set,
                  validation=valid_set,
                  test=test_set,
-                 activation=(tanh, tanh_deriv))
-
+                 activation=(tanh, tanh_deriv),
+                 decay_factor=decay_factor)
 
     print "pop size = " + str(population_size)
     g.create_population(population_size)
