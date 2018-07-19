@@ -94,35 +94,35 @@ class Genetics:
         """
         self.population = [Chromosome(self.hidden_layers_sz) for _ in xrange(0, count)]
 
-    def crossover_param(self, child_param, p1_param, p2_param):
+    def crossover_param(self, p1_param, p2_param):
         # crossover of either weight or bias
         if p1_param.shape[0] == 1:
-            if np.random.random() < 0.5:
-                child_param = p1_param
-            else:
-                child_param = p2_param
+            return p1_param if np.random.random() < 0.5 else p2_param
         else:
+            # can transform to list comprehension?
+            # cp = [p1_param[i] if np.random.random() < 0.5 else p2_param[i] for i in xrange(p1_param.shape[0])]
+            cp = np.empty_like(p1_param)  # initialization
             for i in xrange(p1_param.shape[0]):
                 if np.random.random() < 0.5:
-                    child_param[i] = p1_param[i]
+                    cp[i] = p1_param[i]
                 else:
-                    child_param[i] = p2_param[i]
+                    cp[i] = p2_param[i]
+            return cp
 
     def crossover(self, p1, p2):
         # crossover by row
         child = Chromosome(self.hidden_layers_sz)
-        self.crossover_param(child.W1, p1.W1, p2.W1)
-        self.crossover_param(child.b1, p1.b1, p2.b1)
-        self.crossover_param(child.W2, p1.W2, p2.W2)
-        self.crossover_param(child.b2, p1.b2, p2.b2)
-        self.crossover_param(child.W3, p1.W3, p2.W3)
-        self.crossover_param(child.b3, p1.b3, p2.b3)
+        child.W1 = self.crossover_param(p1.W1, p2.W1)
+        child.b1 = self.crossover_param(p1.b1, p2.b1)
+        child.W2 = self.crossover_param(p1.W2, p2.W2)
+        child.b2 = self.crossover_param(p1.b2, p2.b2)
+        child.W3 = self.crossover_param(p1.W3, p2.W3)
+        child.b3 = self.crossover_param(p1.b3, p2.b3)
         return child
 
     def evolve(self):
-        """Evolve a population of chromosomes.
-        Args:
-            pop (list): A list of network parameters
+        """
+        Evolve a population of chromosomes.
         """
 
         # get activation and derivative functions
@@ -192,18 +192,18 @@ class Genetics:
             if i % 100 == 0 and i > 0:
                 self.validate_on_test()
 
-            # deacay mutate change
+            # decay mutate change
             if i % 1000 == 999:
                 self.mutate_chance -= self.decay_factor
 
-        # print best to file
+        # print best to output_weights_files
         name = "best_devel_weights_" + str(time.time())
-        print "writing to file " + name
-        with open(name, 'wb') as file:
-            pickle.dump(self.best_devel[1], file)
+        print "writing to output_weights_files " + name
+        with open(name, 'wb') as output_weights_files:
+            pickle.dump(self.best_devel[1], output_weights_files)
 
-        # with open("best_devel_weights_1529639442.52", 'r') as file:
-        #     temp = pickle.load(file)
+        # with open("best_devel_weights_1529639442.52", 'r') as output_weights_files:
+        #     temp = pickle.load(output_weights_files)
         #     print "best_on_test: {:^3.2f}".format(
         #         temp.calc_fitness(self.inner_network, self.test, len(self.test[0]))[0])
 
@@ -246,6 +246,7 @@ def main():
         mutate_change = 0.2
         mutate_size = 0.012
         population_size = 150
+        decay_factor = mutate_change*0.1
 
     g = Genetics(hidden_layers_sz=hidden_layers_sz,
                  retain=retain,
