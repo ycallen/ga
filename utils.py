@@ -1,7 +1,5 @@
-from numpy import arange
-import random
-import numpy as np
 import mnist
+import numpy as np
 from sklearn.utils import shuffle
 
 # sigmoid activation function
@@ -22,6 +20,7 @@ tanh_deriv = lambda x: 1 - np.power(np.tanh(x), 2)
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
+
 
 def get_data():
     mnist_loader = mnist.MNIST(return_type="numpy")
